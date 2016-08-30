@@ -8,10 +8,33 @@ module mod_statistics
     ! Random number generation
     function rnorm(mu, sigma)
         real(kind=r2), intent(in) :: mu, sigma
-        real(kind=r2) :: z
         real(kind=r2) :: rnorm
 
         rnorm = mu + random_normal() * sigma
+        return
+    end function
+
+    function mvrnorm(n, mu, sigma)
+        integer(kind=i2), intent(in) :: n
+        real(kind=r2), intent(in) :: mu(n), sigma(n,n)
+
+        real(kind=r1) :: mu2(n)
+        real(kind=r1), dimension(n * (n-1) / 2 + n) :: sigma_vec, lower_vec
+        integer(kind=i2) :: i, j, posdef
+
+        real(kind=r1) :: mvrnorm(n)
+
+        ! random_mvnorm takes real(4) for arguments, so coerce
+        mu2 = mu
+
+        ! Convert sigma to vector of upper triangular matrix
+        do i = 1, n
+            do j = i, n
+                sigma_vec(j * (j-1) / 2 + i) = sigma(i,j)
+            enddo
+        enddo
+
+        call random_mvnorm(n, mu2, sigma_vec, lower_vec, .true., mvrnorm, posdef)
         return
     end function
 

@@ -54,3 +54,29 @@ subroutine mh_sample(observed, nspec, model, &
         endif
     end do
 end subroutine 
+
+!! subroutine mh_sample_block(observed, nspec, model, &
+!!         inits, npars, ipars, cons, ncons, icons, rsd, &
+!!         Jump, pmu, psd, plog, pmin, PrevError, ar)
+!!     use mod_types
+!!     use mod_statistics
+!!     use mod_dataspec_wavelength
+!!     implicit none
+!! 
+!!     ! Inputs -- unchanged
+!!     integer(kind=i2), intent(in) :: npars, nspec, ncons
+!!     integer(kind=i2), intent(in) :: ipars(npars), icons(ncons)
+!!     real(kind=r2), intent(in) :: observed(nw,nspec), cons(ncons), rsd, Jump(npars)
+!!     real(kind=r2), intent(in), dimension(npars) :: pmin, pmu, psd
+!!     logical, intent(in) :: plog(npars)
+!!     procedure() :: model
+!! 
+!!     ! Input/Output -- modified
+!!     real(kind=r1) :: ar
+!!     real(kind=r2) :: inits(npars), PrevError(nw, nspec)
+!! 
+!!     ! Internals
+!!     tvec = 
+
+    
+
