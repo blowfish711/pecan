@@ -1,0 +1,5 @@
+#!/bin/bash
+R CMD INSTALL . --preclean
+Rscript "tests/testthat/test.fortran.mvrnorm.R"
+Rscript "tests/testthat/test.fortran.invert.R"
+#evince fortran.pdf
