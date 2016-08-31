@@ -47,43 +47,43 @@ subroutine invert_block(observed, nspec, modcode, &
         Jump(i,i) = inits(i) * 0.05
     enddo
     rescale = 0d0
-    adapt = 50
+    adapt = 200
     adj_min = 0.1
     ar = 0
     do ng=1,ngibbs
         if (ng > adapt .AND. mod(ng, adapt) == 1) then
             rescale = 0d0
-            write(*,*) "Acceptance rate", ar
+            !write(*,*) "Acceptance rate", ar
             if(ar < 2) then
                 do i=1,npars
                     rescale(i,i) = adj_min
                 enddo
-                Jump = matmul(rescale, Jump)
-                Jump = matmul(Jump, rescale)
+                Jump = blas_matmul(rescale, Jump, npars, npars, npars)
+                Jump = blas_matmul(Jump, rescale, npars, npars, npars)
             else
                 adj = ar / adapt / 0.234
                 if (adj < adj_min) adj = adj_min
-                write(*,*) "Adjustment", adj
+                !write(*,*) "Adjustment", adj
                 do i=1,npars
                     rescale(i,i) = sd(results(ng-adapt+1 : ng-1,i)) * adj
                 enddo
-                write(*,*) "rescale"
-                call print_matrix(rescale)
+                !write(*,*) "rescale"
+                !call print_matrix(rescale)
                 cormat = cor(results(ng-adapt : ng-1, 1:npars))
-                write(*,*) "cormat"
-                call print_matrix(cormat)
+                !write(*,*) "cormat"
+                !call print_matrix(cormat)
                 if (any(isnan(cormat))) then
-                    write(*,*) "Some cormat values are NAN. Converting to identity"
+                    !write(*,*) "Some cormat values are NAN. Converting to identity"
                     cormat = 0d0
                     do i = 1,npars
                         cormat(i,i) = 1.0d0
                     enddo
                 endif
-                Jump = matmul(rescale, cormat)
-                Jump = matmul(Jump, rescale)
+                Jump = blas_matmul(rescale, cormat, npars, npars, npars)
+                Jump = blas_matmul(Jump, rescale, npars, npars, npars)
             endif
-            write(*,*) "Jump"
-            call print_matrix(Jump)
+            !write(*,*) "Jump"
+            !call print_matrix(Jump)
             ar = 0d0
         endif
         call mh_sample_block(observed, nspec, model, &

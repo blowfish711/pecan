@@ -6,7 +6,7 @@ library(testthat)
 context("Test Fortran block sampling inversion")
 
 # Block sampler
-ngibbs <- 500
+ngibbs <- 10000
 
 param <- c("N" = 1.5, "Cab" = 40, "Car" = 8, "Cw" = 0.01, "Cm" = 0.01)
 true_obs <- prospect(param, 5)[,1]

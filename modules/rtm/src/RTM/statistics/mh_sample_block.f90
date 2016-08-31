@@ -29,11 +29,6 @@ subroutine mh_sample_block(observed, nspec, model, &
         stop
     endif
     tvec = mvrnorm(npars, inits, Jump)
-    if (ar == 0) then
-        write(*,*) "tvec", tvec
-        write(*,*) "inits", inits
-        write(*,*) "difference", tvec - inits
-    endif
     if(any(tvec < pmin)) return
     call model(tvec, npars, ipars, cons, ncons, icons, TrySpec)
     do i = 1,nspec

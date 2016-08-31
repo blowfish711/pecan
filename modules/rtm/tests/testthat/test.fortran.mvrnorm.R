@@ -6,10 +6,12 @@ library(testthat)
 context("Test Fortran multivariate normal distribution")
 
 # Multivariate normal draw
-nsamp <- as.integer(500000)
+nsamp <- as.integer(5000)
 nvar <- as.integer(2)
 mu <- c(0, 0)
 Sigma <- matrix(c(1, 0.5, 0.5, 1), 2)
+print("R cholesky")
+print(chol(Sigma))
 sample <- matrix(0, nsamp, nvar)
 call_list <- list("test_mvrnorm", nsamp=nsamp, nvar=nvar, 
                   mu = mu, sigma = Sigma, sample = sample)
@@ -17,7 +19,9 @@ call_list <- list("test_mvrnorm", nsamp=nsamp, nvar=nvar,
 out <- do.call(.Fortran, call_list)
 result <- out$sample
 print(head(result))
+print("Sample mean")
 print(colMeans(result))
+print("Sample covariance")
 print(cov(result))
 
 
