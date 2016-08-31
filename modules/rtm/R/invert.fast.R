@@ -65,7 +65,11 @@ invert.fast <- function(modname, observed, inits, cons,
     seed <- round(1e8 * runif(100))
     seed <- as.integer(seed)
 
-    in.list <- list("invert_basic", observed, nspec, modcode,
+    print(dim(results))
+    print(class(results))
+    print(typeof(results))
+
+    in.list <- list("invert_block", observed, nspec, modcode,
                     inits, npars, ipars, cons, ncons, icons,
                     pmu, psd, plog, minp, ngibbs, results, seed)
 

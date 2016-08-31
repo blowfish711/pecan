@@ -1,4 +1,5 @@
 MODULE random
+    use mod_types
 ! Source: http://jblevins.org/mirror/amiller/
 ! A module for random number generation from the following distributions:
 !
@@ -113,10 +114,10 @@ FUNCTION random_normal() RESULT(fn_val)
 !  The algorithm uses the ratio of uniforms method of A.J. Kinderman
 !  and J.F. Monahan augmented with quadratic bounding curves.
 
-REAL :: fn_val
+REAL*8 :: fn_val
 
 !     Local variables
-REAL     :: s = 0.449871, t = -0.386595, a = 0.19600, b = 0.25472,    &
+REAL*8     :: s = 0.449871, t = -0.386595, a = 0.19600, b = 0.25472,    &
             r1 = 0.27597, r2 = 0.27846, u, v, x, y, q
 
 !     Generate P = (u,v) uniform in rectangle enclosing acceptance region
@@ -500,108 +501,162 @@ fn_val = x
 RETURN
 END FUNCTION random_t
 
+function mvrnorm(n, mu, sigma)
+    integer(kind = i2), intent(in) :: n
+    real(kind=r2), intent(in) :: mu(n)
+    real(kind=r2), intent(in) :: sigma(n, n)
+    
+    real(kind=r2) :: chol(n, n), mvrnorm(n)
+    integer(kind=i2) :: info
+    integer(kind=i2) :: i
 
+    chol = sigma
 
-SUBROUTINE random_mvnorm(n, h, d, f, first, x, ier)
+    !call r8po_fa(n, chol, info)
+    call cholesky(chol)
 
-! Adapted from Fortran 77 code from the book:
-!     Dagpunar, J. 'Principles of random variate generation'
-!     Clarendon Press, Oxford, 1988.   ISBN 0-19-852202-9
+    if (info /= 0 ) then
+        write(*,*) "mvnorm error"
+        write(*,*) "Variance-covariance matrix is not positive definite"
+        stop
+    endif
 
-! N.B. An extra argument, ier, has been added to Dagpunar's routine
+    do i=1,n
+        mvrnorm(i) = random_normal()
+    enddo
 
-!     SUBROUTINE GENERATES AN N VARIATE RANDOM NORMAL
-!     VECTOR USING A CHOLESKY DECOMPOSITION.
+    mvrnorm = mu + matmul(chol, mvrnorm)
+    if(any(isnan(mvrnorm))) then
+        write(*,*) "Bad sample in mvrnorm"
+        write(*,*) "mu", mu
+        write(*,*) "sigma", sigma
+        write(*,*) "chol", chol
+        write(*,*) "mvrnorm", mvrnorm
+    endif
+    return
+end function
 
-! ARGUMENTS:
-!        N = NUMBER OF VARIATES IN VECTOR
-!           (INPUT,INTEGER >= 1)
-!     H(J) = J'TH ELEMENT OF VECTOR OF MEANS
-!           (INPUT,REAL)
-!     X(J) = J'TH ELEMENT OF DELIVERED VECTOR
-!           (OUTPUT,REAL)
-!
-!    D(J*(J-1)/2+I) = (I,J)'TH ELEMENT OF VARIANCE MATRIX (J> = I)
-!            (INPUT,REAL)
-!    F((J-1)*(2*N-J)/2+I) = (I,J)'TH ELEMENT OF LOWER TRIANGULAR
-!           DECOMPOSITION OF VARIANCE MATRIX (J <= I)
-!            (OUTPUT,REAL)
+subroutine cholesky (A)
+    real(kind=r2) :: A(:,:), s
+    integer(kind=i1) :: n, j
 
-!    FIRST = .TRUE. IF THIS IS THE FIRST CALL OF THE ROUTINE
-!    OR IF THE DISTRIBUTION HAS CHANGED SINCE THE LAST CALL OF THE ROUTINE.
-!    OTHERWISE SET TO .FALSE.
-!            (INPUT,LOGICAL)
+    n = size(A,1)
+    do j=1,n
+        s = A(j,j) - dot_product(A(j,1:j-1), A(j,1:j-1))
+        if (s <= 0.0d0) then
+            write(*,*) "Error in Cholesky: Matrix is not positive definite"
+            write(*,*) "Cholesky factor:", s
+            stop
+        endif
+        A(j,j) = sqrt(s)
+        if (j < n) A(j+1:n, j) = A(j+1:n,j) - matmul(A(j+1:n, 1:j-1), A(j,1:j-1)) / A(j,j)
+    enddo
+end subroutine
 
-!    ier = 1 if the input covariance matrix is not +ve definite
-!        = 0 otherwise
+!subroutine r8po_fa ( n, a, info )
 
-INTEGER, INTENT(IN)   :: n
-REAL, INTENT(IN)      :: h(:), d(:)   ! d(n*(n+1)/2)
-REAL, INTENT(IN OUT)  :: f(:)         ! f(n*(n+1)/2)
-REAL, INTENT(OUT)     :: x(:)
-LOGICAL, INTENT(IN)   :: first
-INTEGER, INTENT(OUT)  :: ier
+!!*****************************************************************************80
+!!
+!!! R8PO_FA factors an R8PO matrix.
+!!
+!!  Discussion:
+!!
+!!    The R8PO storage format is used for a symmetric positive definite 
+!!    matrix and its inverse.  (The Cholesky factor of an R8PO matrix is an
+!!    upper triangular matrix, so it will be in R8GE storage format.)
+!!
+!!    Only the diagonal and upper triangle of the square array are used.
+!!    This same storage scheme is used when the matrix is factored by
+!!    R8PO_FA, or inverted by R8PO_INVERSE.  For clarity, the lower triangle
+!!    is set to zero.
+!!
+!!    R8PO storage is used by LINPACK and LAPACK.
+!!
+!!    The positive definite symmetric matrix A has a Cholesky factorization
+!!    of the form:
+!!
+!!      A = R' * R
+!!
+!!    where R is an upper triangular matrix with positive elements on
+!!    its diagonal.  This routine overwrites the matrix A with its
+!!    factor R.
+!!
+!!  Licensing:
+!!
+!!    This code is distributed under the GNU LGPL license. 
+!!
+!!  Modified:
+!!
+!!    22 March 2003
+!!
+!!  Author:
+!!
+!!    Original FORTRAN77 version by Dongarra, Bunch, Moler, Stewart.
+!!    FORTRAN90 version by John Burkardt.
+!!
+!!  Reference:
+!!
+!!    Jack Dongarra, Jim Bunch, Cleve Moler, Pete Stewart,
+!!    LINPACK User's Guide,
+!!    SIAM, 1979,
+!!    ISBN13: 978-0-898711-72-1,
+!!    LC: QA214.L56.
+!!
+!!  Parameters:
+!!
+!!    Input, integer ( kind = 4 ) N, the order of the matrix.
+!!
+!!    Input/output, real ( kind = 8 ) A(N,N).
+!!    On input, the matrix in R8PO storage.
+!!    On output, the Cholesky factor R in R8GE storage.
+!!
+!!    Output, integer ( kind = 4 ) INFO, error flag.
+!!    0, normal return.
+!!    K, error condition.  The principal minor of order K is not
+!!    positive definite, and the factorization was not completed.
+!!
+!  implicit none
 
-!     Local variables
-INTEGER       :: j, i, m
-REAL          :: y, v
-INTEGER, SAVE :: n2
+!  integer ( kind = i2 ) n
 
-IF (n < 1) THEN
-  WRITE(*, *) 'SIZE OF VECTOR IS NON POSITIVE'
-  STOP
-END IF
+!  real ( kind = r2 ) a(n,n)
+!  integer ( kind = i2 ) i
+!  integer ( kind = i2 ) info
+!  integer ( kind = i2 ) j
+!  integer ( kind = i2 ) k
+!  real ( kind = r2 ) s
 
-ier = 0
-IF (first) THEN                        ! Initialization, if necessary
-  n2 = 2*n
-  IF (d(1) < zero) THEN
-    ier = 1
-    RETURN
-  END IF
+!  do j = 1, n
 
-  f(1) = SQRT(d(1))
-  y = one/f(1)
-  DO j = 2,n
-    f(j) = d(1+j*(j-1)/2) * y
-  END DO
+!    do k = 1, j - 1
+!      a(k,j) = ( a(k,j) - sum ( a(1:k-1,k) * a(1:k-1,j) ) ) / a(k,k)
+!    end do
 
-  DO i = 2,n
-    v = d(i*(i-1)/2+i)
-    DO m = 1,i-1
-      v = v - f((m-1)*(n2-m)/2+i)**2
-    END DO
+!    s = a(j,j) - sum ( a(1:j-1,j)**2.0d0 )
 
-    IF (v < zero) THEN
-      ier = 1
-      RETURN
-    END IF
+!    if ( s <= 0.0D+00 ) then
+!      write(*,*) "Cholesky s value", s
+!      info = j
+!      return
+!    end if
 
-    v = SQRT(v)
-    y = one/v
-    f((i-1)*(n2-i)/2+i) = v
-    DO j = i+1,n
-      v = d(j*(j-1)/2+i)
-      DO m = 1,i-1
-        v = v - f((m-1)*(n2-m)/2+i)*f((m-1)*(n2-m)/2 + j)
-      END DO ! m = 1,i-1
-      f((i-1)*(n2-i)/2 + j) = v*y
-    END DO ! j = i+1,n
-  END DO ! i = 2,n
-END IF
+!    a(j,j) = sqrt ( s )
 
-x(1:n) = h(1:n)
-DO j = 1,n
-  y = random_normal()
-  DO i = j,n
-    x(i) = x(i) + f((j-1)*(n2-j)/2 + i) * y
-  END DO ! i = j,n
-END DO ! j = 1,n
+!  end do
 
-RETURN
-END SUBROUTINE random_mvnorm
+!  info = 0
+!!
+!!  Since the Cholesky factor is stored in R8GE format, be sure to
+!!  zero out the lower triangle.
+!!
+!  do i = 1, n
+!    do j = 1, i-1
+!      a(i,j) = 0.0D+00
+!    end do
+!  end do
 
-
+!  return
+!end
 
 FUNCTION random_inv_gauss(h, b, first) RESULT(fn_val)
 

@@ -20,6 +20,29 @@ subroutine prior(x, pmu, psd, lognorm, d)
     return
 end subroutine
 
+subroutine prior_block(n, x, pmu, psd, lognorm, d)
+    use mod_types
+    use mod_statistics
+    implicit none
+
+    integer(kind=i2), intent(in) :: n
+    real(kind=r2), intent(in), dimension(n) :: x, pmu, psd
+    logical, intent(in), dimension(n) :: lognorm
+    
+    real(kind=r2), intent(out) :: d
+
+    integer(kind=i1) :: p
+    real(kind=r2) :: dadd
+
+    d = 0d0
+    do p=1,n
+        call prior(x(p), pmu(p), psd(p), lognorm(p), dadd)
+        d = d + dadd
+    enddo
+    return
+end subroutine
+        
+
 subroutine prior_re(x, tausd, d)
     use mod_types
     use mod_statistics

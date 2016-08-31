@@ -1,9 +1,14 @@
-subroutine test_mvrnorm(n, mu, sigma, sample)
+subroutine test_mvrnorm(nsamp, nvar, mu, sigma, sample)
     use mod_statistics
-    integer(kind=i2), intent(in) :: n
-    real(kind=r2), intent(in) :: mu(n), sigma(n,n)
-    real(kind=r2), intent(out) :: sample(n)
-    sample = mvrnorm(n, mu, sigma)
+    use mod_types
+    integer(kind=i2), intent(in) :: nsamp, nvar
+    real(kind=r2), intent(in) :: mu(nvar), sigma(nvar, nvar)
+    real(kind=r2), intent(out) :: sample(nsamp, nvar)
+    integer(kind=i2) :: i
+    do i=1,nsamp
+        sample(i,:) = mvrnorm(nvar, mu, sigma)
+    enddo
+    return
 end subroutine
 
 
