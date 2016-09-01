@@ -23,7 +23,9 @@ module mod_statistics
         real(kind=r2) :: prod(n,1)
         real(kind=r2) :: chol(n, n), mvrnorm(n)
         integer(kind=i2) :: info
-        integer(kind=i2) :: i
+        integer(kind=i2) :: i, one
+
+        one = 1
 
         call cholesky(sigma, chol)
 
@@ -37,7 +39,7 @@ module mod_statistics
             mvrnorm(i) = random_normal()
         enddo
         
-        prod = blas_matmul(chol, mvrnorm, n, 1, n)
+        prod = blas_matmul(chol, mvrnorm, n, one, n)
         mvrnorm = prod(:,1) + mu
 
         if(any(isnan(mvrnorm))) then

@@ -8,7 +8,8 @@ subroutine invert_block(observed, nspec, modcode, &
     implicit none
 
     ! Inputs
-    integer(kind=i2), intent(in) :: nspec, npars, ncons, modcode, seed(100)
+    integer(kind=i2), intent(in) :: nspec, npars, ncons, modcode
+    integer(kind=i2) :: seed(100)
     integer(kind=i2), intent(in) :: ipars(npars), icons(ncons)
     real(kind=r2), intent(in) :: observed(nw,nspec), inits(npars), cons(ncons)
     real(kind=r2), intent(in), dimension(npars) :: pmin, pmu, psd
@@ -51,6 +52,8 @@ subroutine invert_block(observed, nspec, modcode, &
     adj_min = 0.1
     ar = 0
     do ng=1,ngibbs
+        ! Progress notification
+        if (mod(ng, ngibbs / 20) == 0) print *, ng, "of", ngibbs, "iterations complete"
         if (ng > adapt .AND. mod(ng, adapt) == 1) then
             rescale = 0d0
             !write(*,*) "Acceptance rate", ar

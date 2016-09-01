@@ -2,8 +2,6 @@
 # Author: Alexey Shiklomanov, Dept of Earth and Environment / Boston University
 # Email: ashiklom@bu.edu
 
-PKG_LIBS = $(FLIBS) $(LAPACK_LIBS) 
-
 SOURCES = $(wildcard RTM/*.f90 RTM/*/*.f90 RTM/*/*/*.f90)
 OBJECTS = $(SOURCES:.f90=.o)
 
@@ -34,7 +32,3 @@ modules : m3 \
     $(md)dataSpec/dataSpec_soil.o \
     RTM/twostream/mod_hapke_soil.o \
     RTM/twostream/mod_biggamma.o
-
-# Uncomment for debugging
-#%.o : %.f90
-	#gfortran -fpic -fcheck=all -Og -g -c $< -o $@
