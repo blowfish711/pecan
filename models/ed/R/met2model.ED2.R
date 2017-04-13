@@ -7,20 +7,16 @@
 # http://opensource.ncsa.illinois.edu/license.html
 #-------------------------------------------------------------------------------
 
-## R Code to convert from NACP intercomparison NETCDF met files into ED2 ascii met files
-
-## It requires the rhdf5 library, which is not available on CRAN, but by can be installed locally:
-## >source('http://bioconductor.org/biocLite.R') 
-## >biocLite('rhdf5')
-
-## If files already exist in 'Outfolder', the default function is NOT to overwrite them and only
-## gives user the notice that file already exists. If user wants to overwrite the existing files,
-## just change overwrite statement below to TRUE.
-
-
-##' met2model wrapper for ED2
+##' R Code to convert from NACP intercomparison NETCDF met files into ED2 ascii met files
 ##'
-##' @title met2model for ED2
+##' It requires the rhdf5 library, which is not available on CRAN, but by can be installed locally:
+##' >source('http://bioconductor.org/biocLite.R') 
+##' >biocLite('rhdf5')
+##'
+##' If files already exist in 'Outfolder', the default function is NOT to overwrite them and only
+##' gives user the notice that file already exists. If user wants to overwrite the existing files,
+##' just change overwrite statement below to TRUE.
+##'
 ##' @export
 ##' @param in.path location on disk where inputs are stored
 ##' @param in.prefix prefix of input and output files
@@ -36,8 +32,11 @@ met2model.ED2 <- function(in.path, in.prefix, outfolder, start_date, end_date, l
   overwrite <- as.logical(overwrite)
 
   # deprecated?  
-  library(rhdf5)
   library(PEcAn.utils)
+
+  # Constants
+  day_secs <- udunits2::ud.convert(1, 'days', 'seconds')
+  deg2rad <- pi/180
 
   # results are stored in folder prefix.start.end
   start_date <- as.POSIXlt(start_date, tz = "UTC")
@@ -91,7 +90,7 @@ met2model.ED2 <- function(in.path, in.prefix, outfolder, start_date, end_date, l
     if (is.na(lat)) {
       lat <- flat
     } else if (lat != flat) {
-      logger.warn("Latitude does not match that of file", lat, "!=", flat)
+      PEcAn.utils::logger.warn("Latitude does not match that of file", lat, "!=", flat)
     }
     
     flon <- try(ncvar_get(nc, "longitude"), silent = TRUE)
@@ -101,7 +100,7 @@ met2model.ED2 <- function(in.path, in.prefix, outfolder, start_date, end_date, l
     if (is.na(lon)) {
       lon <- flon
     } else if (lon != flon) {
-      logger.warn("Longitude does not match that of file", lon, "!=", flon)
+      PEcAn.utils::logger.warn("Longitude does not match that of file", lon, "!=", flon)
     }
     
     ## determine GMT adjustment lst <- site$LST_shift[which(site$acro == froot)]
@@ -126,10 +125,11 @@ met2model.ED2 <- function(in.path, in.prefix, outfolder, start_date, end_date, l
     sec <- udunits2::ud.convert(sec, unlist(strsplit(nc$dim$time$units, " "))[1], "seconds")
     
     ncdf4::nc_close(nc)
-    
-    dt <- ifelse(lubridate::leap_year(year) == TRUE, 
-                 366 * 24 * 60 * 60 / length(sec), # leap year
-                 365 * 24 * 60 * 60 / length(sec)) # non-leap year
+
+    year_days <- PEcAn.utils::days_in_year(year)
+    year_secs <- udunits2::ud.convert(year_days, 'days', 'seconds')
+
+    dt <- year_secs / length(sec)
     
     toff <- -as.numeric(lst) * 3600 / dt
     
@@ -149,19 +149,15 @@ met2model.ED2 <- function(in.path, in.prefix, outfolder, start_date, end_date, l
     
     ## build time variables (year, month, day of year)
     skip <- FALSE
-    nyr  <- floor(length(sec) / 86400 / 365 * dt)
+    nyr  <- floor(length(sec) / day_secs / 365 * dt)
     yr   <- NULL
     doy  <- NULL
     hr   <- NULL
     asec <- sec
     for (y in seq(year, year + nyr - 1)) {
-      ytmp <- rep(y, 365 * 86400 / dt)
-      dtmp <- rep(1:365, each = 86400 / dt)
-      if (lubridate::leap_year(y)) {
-        ## is leap
-        ytmp <- rep(y, 366 * 86400 / dt)
-        dtmp <- rep(1:366, each = 86400 / dt)
-      }
+      y_days <- PEcAn.utils::days_in_year(y)
+      ytmp <- rep(y, y_days * day_secs / dt)
+      dtmp <- rep(seq_len(y_days), each = day_secs / dt)
       if (is.null(yr)) {
         yr  <- ytmp
         doy <- dtmp
@@ -174,23 +170,23 @@ met2model.ED2 <- function(in.path, in.prefix, outfolder, start_date, end_date, l
       rng <- length(doy) - length(ytmp):1 + 1
       if (!all(rng >= 0)) {
         skip <- TRUE
-        logger.warn(paste(year, "is not a complete year and will not be included"))
+        PEcAn.utils::logger.warn(paste(year, "is not a complete year and will not be included"))
         break
       }
       asec[rng] <- asec[rng] - asec[rng[1]]
-      hr[rng]   <- (asec[rng] - (dtmp - 1) * 86400) / 86400 * 24
+      hr[rng]   <- (asec[rng] - (dtmp - 1) * day_secs) / day_secs * 24
     }
     mo <- day2mo(yr, doy)
     if (length(yr) < length(sec)) {
       rng <- (length(yr) + 1):length(sec)
       if (!all(rng >= 0)) {
         skip <- TRUE
-        logger.warn(paste(year, "is not a complete year and will not be included"))
+        PEcAn.utils::logger.warn(paste(year, "is not a complete year and will not be included"))
         break
       }
       yr[rng]  <- rep(y + 1, length(rng))
-      doy[rng] <- rep(1:366, each = 86400 / dt)[1:length(rng)]
-      hr[rng]  <- rep(seq(0, length = 86400 / dt, by = dt / 86400 * 24), 366)[1:length(rng)]
+      doy[rng] <- rep(1:366, each = day_secs / dt)[1:length(rng)]
+      hr[rng]  <- rep(seq(0, length = day_secs / dt, by = dt / day_secs * 24), 366)[1:length(rng)]
     }
     if (skip) {
       print("Skipping to next year")
@@ -199,19 +195,19 @@ met2model.ED2 <- function(in.path, in.prefix, outfolder, start_date, end_date, l
     
     
     ## calculate potential radiation in order to estimate diffuse/direct
-    f                <- pi/180 * (279.5 + 0.9856 * doy)
+    f                <- deg2rad * (279.5 + 0.9856 * doy)
     et               <- (-104.7 * sin(f) + 596.2 * sin(2 * f) + 4.3 * sin(4 * f) - 429.3 * 
                            cos(f) - 2 * cos(2 * f) + 19.3 * cos(3 * f)) / 3600  # equation of time -> eccentricity and obliquity
     merid            <- floor(lon/15) * 15
     merid[merid < 0] <- merid[merid < 0] + 15
     lc               <- (lon - merid) * -4 / 60  ## longitude correction
     tz               <- merid / 360 * 24  ## time zone
-    midbin           <- 0.5 * dt / 86400 * 24  ## shift calc to middle of bin
+    midbin           <- 0.5 * dt / day_secs * 24  ## shift calc to middle of bin
     t0               <- 12 + lc - et - tz - midbin  ## solar time
     h                <- pi/12 * (hr - t0)  ## solar hour
-    dec              <- -23.45 * pi/180 * cos(2 * pi * (doy + 10) / 365)  ## declination
+    dec              <- -23.45 * deg2rad * cos(2 * pi * (doy + 10) / 365)  ## declination
     
-    cosz             <- sin(lat * pi/180) * sin(dec) + cos(lat * pi/180) * cos(dec) * cos(h)
+    cosz             <- sin(lat * deg2rad) * sin(dec) + cos(lat * deg2rad) * cos(dec) * cos(h)
     cosz[cosz < 0]   <- 0
     
     rpot <- 1366 * cosz
@@ -241,7 +237,7 @@ met2model.ED2 <- function(in.path, in.prefix, outfolder, start_date, end_date, l
     shA    <- Qair  # specific humidity [kg_H2O/kg_air]
     tmpA   <- Tair  # temperature [K]
     if (useCO2) {
-      co2A <- CO2 * 1e+06  # surface co2 concentration [ppm] converted from mole fraction [kg/kg]
+      co2A <- udunits2::ud.convert(CO2, 'kg kg-1', 'ppm') # surface co2 concentration [ppm] converted from mole fraction [kg/kg]
     }
     
     ## create directory if(system(paste('ls',froot),ignore.stderr=TRUE)>0)
@@ -256,14 +252,14 @@ met2model.ED2 <- function(in.path, in.prefix, outfolder, start_date, end_date, l
         if (file.exists(mout)) {
           if (overwrite == TRUE) {
             file.remove(mout)
-            h5createFile(mout)
+            rhdf5::h5createFile(mout)
           }
           if (overwrite == FALSE) {
-            logger.warn("The file already exists! Moving to next month!")
+            PEcAn.utils::logger.warn("The file already exists! Moving to next month!")
             next
           }
         } else {
-          h5createFile(mout)
+          rhdf5::h5createFile(mout)
         }
         dims  <- c(length(selm), 1, 1)
         nbdsf <- array(nbdsfA[selm], dim = dims)
@@ -281,20 +277,20 @@ met2model.ED2 <- function(in.path, in.prefix, outfolder, start_date, end_date, l
         if (useCO2) {
           co2 <- array(co2A[selm], dim = dims)
         }
-        h5write(nbdsf, mout, "nbdsf")
-        h5write(nddsf, mout, "nddsf")
-        h5write(vbdsf, mout, "vbdsf")
-        h5write(vddsf, mout, "vddsf")
-        h5write(prate, mout, "prate")
-        h5write(dlwrf, mout, "dlwrf")
-        h5write(pres, mout, "pres")
-        h5write(hgt, mout, "hgt")
-        h5write(ugrd, mout, "ugrd")
-        h5write(vgrd, mout, "vgrd")
-        h5write(sh, mout, "sh")
-        h5write(tmp, mout, "tmp")
+        rhdf5::h5write(nbdsf, mout, "nbdsf")
+        rhdf5::h5write(nddsf, mout, "nddsf")
+        rhdf5::h5write(vbdsf, mout, "vbdsf")
+        rhdf5::h5write(vddsf, mout, "vddsf")
+        rhdf5::h5write(prate, mout, "prate")
+        rhdf5::h5write(dlwrf, mout, "dlwrf")
+        rhdf5::h5write(pres, mout, "pres")
+        rhdf5::h5write(hgt, mout, "hgt")
+        rhdf5::h5write(ugrd, mout, "ugrd")
+        rhdf5::h5write(vgrd, mout, "vgrd")
+        rhdf5::h5write(sh, mout, "sh")
+        rhdf5::h5write(tmp, mout, "tmp")
         if (useCO2) {
-          h5write(co2, mout, "co2")
+          rhdf5::h5write(co2, mout, "co2")
         }
       }
     }
