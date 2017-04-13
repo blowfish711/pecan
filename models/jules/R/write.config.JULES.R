@@ -13,8 +13,6 @@
 ##' Requires a pft xml object, a list of trait values for a single model run,
 ##' and the name of the file to create
 ##'
-##' @name write.config.JULES
-##' @title Write JULES configuration files
 ##' @param defaults list of defaults to process
 ##' @param trait.samples vector of samples for a given trait
 ##' @param settings list of settings from pecan settings file
@@ -95,7 +93,7 @@ write.config.JULES <- function(defaults, trait.values, settings, run.id) {
       delta_t <- met.header[id]
       dt <- strsplit(strsplit(delta_t, "\"")[[1]][2], " ")[[1]]
       if (dt[2] == "min") {
-        dt[1] <- as.numeric(dt[1]) * 60
+        dt[1] <- udunits2::ud.convert(as.numeric(dt[1]), 'minutes', 'seconds')
         dt[2] <- "sec"
       }
       if (dt[2] == "sec") {
@@ -108,7 +106,7 @@ write.config.JULES <- function(defaults, trait.values, settings, run.id) {
       tlen <- grep("time =", met.header)
       if (length(tlen) > 0) {
         tlen <- as.numeric(gsub(pattern = "[^[:digit:]]", "", met.header[tlen]))
-        dt <- 86400 / round(tlen/(365 + lubridate::leap_year(as.Date(settings$run$start.date))))
+        dt <- 86400 / round(tlen/(PEcAn.utils::days_in_year(lubridate::year(as.Date(settings$run$start.date))))
       } else {
         print(c("write.config.JULES timestep not detected", dt))
         dt <- 1800
