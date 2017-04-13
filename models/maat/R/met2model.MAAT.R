@@ -7,20 +7,18 @@
 # http://opensource.ncsa.illinois.edu/license.html
 #-------------------------------------------------------------------------------
 
-## R Code to convert NetCDF CF met files into MAAT model met files
-
-## If files already exist in 'Outfolder', the default function is NOT to overwrite them and only
-## gives user the notice that file already exists. If user wants to overwrite the existing files,
-## just change overwrite statement below to TRUE.
 
 # leaf_user_met prefix
 PREFIX_XML <- "<?xml version=\"1.0\"?>\n"
 
 ##-------------------------------------------------------------------------------------------------#
-##' met2model wrapper for MAAT
+
+##' R Code to convert NetCDF CF met files into MAAT model met files
 ##'
-##' @name met2model.MAAT
-##' @title Create MAAT met driver files
+##' If files already exist in 'Outfolder', the default function is NOT to overwrite them and only
+##' gives user the notice that file already exists. If user wants to overwrite the existing files,
+##' just change overwrite statement below to TRUE.
+##'
 ##' @param in.path location on disk where inputs (CF met drivers) are stored
 ##' @param in.prefix prefix of input and output files
 ##' @param outfolder location on disk where MAAT met outputs will be stored
@@ -30,17 +28,14 @@ PREFIX_XML <- "<?xml version=\"1.0\"?>\n"
 ##' @param verbose should the function be very verbose
 ##' @export
 ##' @author Shawn P. Serbin
-##' @importFrom PEcAn.utils logger.debug logger.warn listToXml
-##' @importFrom udunits2 ud.convert
 ##' @importFrom ncdf4 ncvar_get
-##' @importFrom XML saveXML
 met2model.MAAT <- function(in.path, in.prefix, outfolder, start_date, end_date, 
                            overwrite = FALSE, verbose = FALSE, ...) {
 
   ## MAAT driver format (.csv):
   ## Time (POSIX),  Air Temp (°C), PAR (umols m-2 s-1), Precipitation( ??), Atmospheric CO2 (μmol mol-1) ... # STILL IN DEVELOPMENT
   
-  print("START met2model.MAAT")
+  PEcAn.utils::logger.info("START met2model.MAAT")
   
   start_date <- as.POSIXlt(start_date, tz = "GMT")
   end_date <- as.POSIXlt(end_date, tz = "GMT")
@@ -64,7 +59,7 @@ met2model.MAAT <- function(in.path, in.prefix, outfolder, start_date, end_date,
   print(results)
   
   if (file.exists(out.file.full) && !overwrite) {
-    logger.debug("File '", out.file.full, "' already exists, skipping to next file.")
+    PEcAn.utils::logger.debug("File '", out.file.full, "' already exists, skipping to next file.")
     return(invisible(results))
   }
   
@@ -78,6 +73,8 @@ met2model.MAAT <- function(in.path, in.prefix, outfolder, start_date, end_date,
   # get start/end year since inputs are specified on year basis
   start_year <- lubridate::year(start_date)
   end_year <- lubridate::year(end_date)
+
+  day_secs <- udunits2::ud.convert(1, 'days', 'seconds')
   
   ## loop over files 
   ## TODO need to filter out the data that is not inside start_date, end_date
@@ -95,14 +92,15 @@ met2model.MAAT <- function(in.path, in.prefix, outfolder, start_date, end_date,
       ## convert time to seconds
       sec <- nc$dim$time$vals
       frac.day <- nc$dim$time$vals
-      sec <- ud.convert(sec, unlist(strsplit(nc$dim$time$units, " "))[1], "seconds")
+      sec <- udunits2::ud.convert(sec, unlist(strsplit(nc$dim$time$units, " "))[1], "seconds")
+
+      year_days <- PEcAn.utils::days_in_year(year)
+      year_secs <- udunits2::ud.convert(year_days, 'days', 'seconds')
+
+      dt <- year_secs / length(sec)
       
-      dt <- ifelse(lubridate::leap_year(year) == TRUE, 
-                   366 * 24 * 60 * 60 / length(sec), # leap year
-                   365 * 24 * 60 * 60 / length(sec)) # non-leap year
-      
-      tstep <- round(86400 / dt)
-      dt    <- 86400 / tstep
+      tstep <- round(day_secs / dt)
+      dt    <- day_secs / tstep
       
       ## extract required MAAT driver variables names(nc$var)
       lat  <- ncvar_get(nc, "latitude")
@@ -134,19 +132,15 @@ met2model.MAAT <- function(in.path, in.prefix, outfolder, start_date, end_date,
     }
     
     ## build time variables (year, month, day of year)
-    nyr  <- floor(length(sec) / 86400 / 365 * dt)
+    nyr  <- floor(length(sec) / day_secs / 365 * dt)
     yr   <- NULL
     doy  <- NULL
     hr   <- NULL
     asec <- sec
     for (y in year + 1:nyr - 1) {
-      ytmp <- rep(y, 365 * 86400 / dt)
-      dtmp <- rep(1:365, each = 86400 / dt)
-      if (y %% 4 == 0) {
-        ## is leap
-        ytmp <- rep(y, 366 * 86400 / dt)
-        dtmp <- rep(1:366, each = 86400 / dt)
-      }
+      y_days <- PEcAn.utils::days_in_year(y)
+      ytmp <- rep(y, y_days * day_secs / dt)
+      dtmp <- rep(seq_len(y_days), each = day_secs / dt)
       if (is.null(yr)) {
         yr  <- ytmp
         doy <- dtmp
@@ -159,11 +153,11 @@ met2model.MAAT <- function(in.path, in.prefix, outfolder, start_date, end_date,
       rng <- length(doy) - length(ytmp):1 + 1
       if (!all(rng >= 0)) {
         skip <- TRUE
-        logger.warn(paste(year, "is not a complete year and will not be included"))
+        PEcAn.utils::logger.warn(paste(year, "is not a complete year and will not be included"))
         break
       }
       asec[rng] <- asec[rng] - asec[rng[1]]
-      hr[rng] <- (asec[rng] - (dtmp - 1) * 86400) / 86400 * 24
+      hr[rng] <- (asec[rng] - (dtmp - 1) * day_secs) / day_secs * 24
     }
     
     # Time
@@ -176,7 +170,7 @@ met2model.MAAT <- function(in.path, in.prefix, outfolder, start_date, end_date,
                             DOY = doy[1:n], 
                             HOUR = hr[1:n], 
                             FRAC_DAY = frac.day[1:n], 
-                            TIMESTEP = rep(dt/86400, n), 
+                            TIMESTEP = rep(dt/day_secs, n), 
                             # TODO: Add VPD, etc
                             CO2 = CO2, 
                             Tair_degC = Tair - 273.15,  # convert to celsius
@@ -187,7 +181,7 @@ met2model.MAAT <- function(in.path, in.prefix, outfolder, start_date, end_date,
     ## quick error check, sometimes get a NA in the last hr ?? NEEDED?
     hr.na <- which(is.na(tmp[, 3]))
     if (length(hr.na) > 0) {
-      tmp[hr.na, 3] <- tmp[hr.na - 1, 3] + dt/86400 * 24
+      tmp[hr.na, 3] <- tmp[hr.na - 1, 3] + dt/day_secs * 24
     }
     
     if (is.null(out)) {
@@ -218,13 +212,13 @@ met2model.MAAT <- function(in.path, in.prefix, outfolder, start_date, end_date,
     # TODO: make this dynamic with names above!
     # TODO: add the additional met variables, make dynamic
     leaf_user_met_list <- list(leaf = list(env = list(time = "'Time'", temp = "'Tair_degC'", par = "'PAR_umols_m2_s'")))
-    leaf_user_met_xml <- listToXml(leaf_user_met_list, "met_data_translator")
+    leaf_user_met_xml <- PEcAn.utils::listToXml(leaf_user_met_list, "met_data_translator")
     
     # output XML file
-    saveXML(leaf_user_met_xml, 
-            file = file.path(outfolder, "leaf_user_met.xml"), 
-            indent = TRUE, 
-            prefix = PREFIX_XML)
+    XML::saveXML(leaf_user_met_xml, 
+                 file = file.path(outfolder, "leaf_user_met.xml"), 
+                 indent = TRUE, 
+                 prefix = PREFIX_XML)
     
     return(invisible(results))
     
