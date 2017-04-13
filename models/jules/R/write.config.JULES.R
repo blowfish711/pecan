@@ -26,6 +26,7 @@ write.config.JULES <- function(defaults, trait.values, settings, run.id) {
   # constants
   molH2O_to_grams <- 18.01528
   leafC <- 0.48
+  day_secs <- udunits2::ud.convert(1, 'days', 'seconds')
   
   # find out where to write run/ouput
   rundir <- file.path(settings$host$rundir, run.id)
@@ -106,7 +107,7 @@ write.config.JULES <- function(defaults, trait.values, settings, run.id) {
       tlen <- grep("time =", met.header)
       if (length(tlen) > 0) {
         tlen <- as.numeric(gsub(pattern = "[^[:digit:]]", "", met.header[tlen]))
-        dt <- 86400 / round(tlen/(PEcAn.utils::days_in_year(lubridate::year(as.Date(settings$run$start.date))))
+        dt <- day_secs / round(tlen/(PEcAn.utils::days_in_year(lubridate::year(as.Date(settings$run$start.date)))))
       } else {
         print(c("write.config.JULES timestep not detected", dt))
         dt <- 1800
