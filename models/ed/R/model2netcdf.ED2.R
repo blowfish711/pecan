@@ -7,23 +7,25 @@
 # http://opensource.ncsa.illinois.edu/license.html
 #-------------------------------------------------------------------------------
 
-##' Modified from Code to convert ED2.1's HDF5 output into the NACP Intercomparison format (ALMA using netCDF)
-##' 
-##' @name model2netcdf.ED2
-##' @title Code to convert ED2's -T- HDF5 output into netCDF format
+##' Code to convert ED2's -T- HDF5 output into netCDF format
 ##'
+##' Code to convert ED2.1's HDF5 output into the NACP Intercomparison format (ALMA using netCDF)
+##' 
 ##' @param outdir Location of ED model output
 ##' @param sitelat Latitude of the site
 ##' @param sitelon Longitude of the site
 ##' @param start_date Start time of the simulation
 ##' @param end_date End time of the simulation
 ##' @importFrom ncdf4 ncdim_def ncatt_get ncvar_add
-##' @importFrom PEcAn.utils logger.info
 ##' @export
 ##'
 ##' @author Michael Dietze, Shawn Serbin, Rob Kooper, Toni Viskari
-## modified M. Dietze 07/08/12 modified S. Serbin 05/06/13
+## ---
+##  modified M. Dietze 07/08/12 
+##  modified S. Serbin 05/06/13
 model2netcdf.ED2 <- function(outdir, sitelat, sitelon, start_date, end_date) {
+  
+  day_secs <- udunits2::ud.convert(1, 'days', 'seconds')
   
   flist <- dir(outdir, "-T-")
   if (length(flist) == 0) {
@@ -63,13 +65,13 @@ model2netcdf.ED2 <- function(outdir, sitelat, sitelon, start_date, end_date) {
           out[[col]] <- array(dat, dim = (end - start))
         } else {
           if (start != 0) {
-            logger.warn("start date is not 0 this year, but data already exists in this col", 
-                        col, "how is this possible?")
+            PEcAn.utils::logger.warn("start date is not 0 this year, but data already exists in this col", 
+                                     col, "how is this possible?")
           }
           out[[col]] <- abind::abind(out[[col]], array(dat, dim = (end - start)), along = 1)
         }
       } else {
-        logger.warn("expected a single value")
+        PEcAn.utils::logger.warn("expected a single value")
       }
     } else if (length(dims) == 1) {
       dat <- dat[1:(end - start)]
@@ -77,8 +79,8 @@ model2netcdf.ED2 <- function(outdir, sitelat, sitelon, start_date, end_date) {
         out[[col]] <- dat
       } else {
         if (start != 0) {
-          logger.warn("start date is not 0 this year, but data already exists in this col", 
-                      col, "how is this possible?")
+          PEcAn.utils::logger.warn("start date is not 0 this year, but data already exists in this col", 
+                                   col, "how is this possible?")
         }
         out[[col]] <- abind::abind(out[[col]], dat, along = 1)
       }
@@ -90,19 +92,19 @@ model2netcdf.ED2 <- function(outdir, sitelat, sitelon, start_date, end_date) {
         out[[col]] <- dat
       } else {
         if (start != 0) {
-          logger.warn("start date is not 0 this year, but data already exists in this col", 
-                      col, "how is this possible?")
+          PEcAn.utils::logger.warn("start date is not 0 this year, but data already exists in this col", 
+                                   col, "how is this possible?")
         }
         out[[col]] <- abind::abind(out[[col]], dat, along = 1)
       }
     } else {
-      logger.debug("-------------------------------------------------------------")
-      logger.debug("col=", col)
-      logger.debug("length=", length(dat))
-      logger.debug("start=", start)
-      logger.debug("end=", end)
-      logger.debug("dims=", dims)
-      logger.warn("Don't know how to handle larger arrays yet.")
+      PEcAn.utils::logger.debug("-------------------------------------------------------------")
+      PEcAn.utils::logger.debug("col=", col)
+      PEcAn.utils::logger.debug("length=", length(dat))
+      PEcAn.utils::logger.debug("start=", start)
+      PEcAn.utils::logger.debug("end=", end)
+      PEcAn.utils::logger.debug("dims=", dims)
+      PEcAn.utils::logger.warn("Don't know how to handle larger arrays yet.")
     }
     
     ## finally make sure we use -999 for invalid values
@@ -116,7 +118,7 @@ model2netcdf.ED2 <- function(outdir, sitelat, sitelon, start_date, end_date) {
     if (var %in% names(nc$var)) {
       return(ncdf4::ncvar_get(nc, var))
     } else {
-      logger.warn("Could not find", var, "in ed hdf5 output.")
+      PEcAn.utils::logger.warn("Could not find", var, "in ed hdf5 output.")
       return(-999)
     }
   }
@@ -141,8 +143,9 @@ model2netcdf.ED2 <- function(outdir, sitelat, sitelon, start_date, end_date) {
   
   ## loop over files ### break by YEAR
   yrs <- sort(unique(yr))
-  for (y in 1:length(yrs)) {
+  for (y in seq_along(yrs)) {
     ysel <- which(yr == yrs[y])
+    y_days <- PEcAn.utils::days_in_year(ysel)
     if (yrs[y] < strftime(start_date, "%Y")) {
       print(paste0(yrs[y], "<", strftime(start_date, "%Y")))
       next
@@ -155,23 +158,21 @@ model2netcdf.ED2 <- function(outdir, sitelat, sitelon, start_date, end_date) {
     out <- list()
     ## prevTime <- NULL print(y)
     #print(paste("----- Processing year: ", yrs[y]))
-    logger.info(paste0("----- Processing year: ",yrs[y]))
+    PEcAn.utils::logger.info(paste0("----- Processing year: ",yrs[y]))
     ## if(haveTime) prevTime <- progressBar()
     row <- 1
     for (i in ysel) {
       ncT <- ncdf4::nc_open(file.path(outdir, flist[i]))
       ## determine timestep from HDF5 file
-      block <- ifelse(lubridate::leap_year(yrs[y]) == TRUE,
-                      ncT$dim$phony_dim_0$len/366, # a leaper 
-                      ncT$dim$phony_dim_0$len/365) # non leap
-      logger.info(paste0("Output interval: ",86400/block," sec"))
+      block <- ncT$dim$phony_dim_0$len/y_days
+      PEcAn.utils::logger.info(paste0("Output interval: ", day_secs/block, " sec"))
       ##
       if (file.exists(file.path(outdir, sub("-T-", "-Y-", flist[i])))) {
         ncY <- ncdf4::nc_open(file.path(outdir, sub("-T-", "-Y-", flist[i])))
         slzdata <- getHdf5Data(ncY, "SLZ")
         ncdf4::nc_close(ncY)
       } else {
-        logger.warn("Could not find SLZ in Y file, making a crude assumpution.")
+        PEcAn.utils::logger.warn("Could not find SLZ in Y file, making a crude assumpution.")
         slzdata <- array(c(-2, -1.5, -1, -0.8, -0.6, -0.4, -0.2, -0.1, -0.05))
       }
       
