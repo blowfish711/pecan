@@ -18,7 +18,7 @@ model2netcdf.ED2(outdir, sitelat, sitelon, start_date, end_date)
 \item{end_date}{End time of the simulation}
 }
 \description{
-Modified from Code to convert ED2.1's HDF5 output into the NACP Intercomparison format (ALMA using netCDF)
+Code to convert ED2.1's HDF5 output into the NACP Intercomparison format (ALMA using netCDF)
 }
 \author{
 Michael Dietze, Shawn Serbin, Rob Kooper, Toni Viskari

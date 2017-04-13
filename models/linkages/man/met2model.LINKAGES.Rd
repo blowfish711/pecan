@@ -2,7 +2,7 @@
 % Please edit documentation in R/met2model.LINKAGES.R
 \name{met2model.LINKAGES}
 \alias{met2model.LINKAGES}
-\title{Write LINKAGES met files}
+\title{Write met file for LINKAGES model}
 \usage{
 met2model.LINKAGES(in.path, in.prefix, outfolder, start_date, end_date,
   overwrite = FALSE, verbose = FALSE, ...)
@@ -19,7 +19,7 @@ OK if everything was succesful.
 }
 \description{
 Converts a met CF file to a model specific met file. The input
-files are calld <in.path>/<in.prefix>.YYYY.cf
+files are called <in.path>/<in.prefix>.YYYY.cf
 }
 \author{
 Ann Raiho, Betsy Cowdery

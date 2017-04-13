@@ -2,7 +2,7 @@
 % Please edit documentation in R/met2model.MAAT.R
 \name{met2model.MAAT}
 \alias{met2model.MAAT}
-\title{Create MAAT met driver files}
+\title{R Code to convert NetCDF CF met files into MAAT model met files}
 \usage{
 met2model.MAAT(in.path, in.prefix, outfolder, start_date, end_date,
   overwrite = FALSE, verbose = FALSE, ...)
@@ -23,7 +23,9 @@ met2model.MAAT(in.path, in.prefix, outfolder, start_date, end_date,
 \item{verbose}{should the function be very verbose}
 }
 \description{
-met2model wrapper for MAAT
+If files already exist in 'Outfolder', the default function is NOT to overwrite them and only
+gives user the notice that file already exists. If user wants to overwrite the existing files,
+just change overwrite statement below to TRUE.
 }
 \author{
 Shawn P. Serbin

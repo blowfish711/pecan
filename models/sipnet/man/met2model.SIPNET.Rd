@@ -2,7 +2,7 @@
 % Please edit documentation in R/met2model.SIPNET.R
 \name{met2model.SIPNET}
 \alias{met2model.SIPNET}
-\title{met2model.SIPNET}
+\title{R Code to convert NetCDF CF met files into SIPNET met files}
 \usage{
 met2model.SIPNET(in.path, in.prefix, outfolder, start_date, end_date,
   overwrite = FALSE, verbose = FALSE, ...)
@@ -23,5 +23,7 @@ met2model.SIPNET(in.path, in.prefix, outfolder, start_date, end_date,
 \item{verbose}{should the function be very verbose}
 }
 \description{
-met2model wrapper for SIPNET
+If files already exist in 'Outfolder', the default function is NOT to overwrite them and only
+gives user the notice that file already exists. If user wants to overwrite the existing files,
+just change overwrite statement below to TRUE.
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/met2model.DALEC.R
 \name{met2model.DALEC}
 \alias{met2model.DALEC}
-\title{met2model.DALEC}
+\title{R Code to convert NetCDF CF met files into DALEC met files}
 \usage{
 met2model.DALEC(in.path, in.prefix, outfolder, start_date, end_date,
   overwrite = FALSE, verbose = FALSE, ...)
@@ -23,5 +23,7 @@ met2model.DALEC(in.path, in.prefix, outfolder, start_date, end_date,
 \item{verbose}{should the function be very verbose}
 }
 \description{
-met2model for DALEC
+If files already exist in 'Outfolder', the default function is NOT to overwrite them and only
+gives user the notice that file already exists. If user wants to overwrite the existing files,
+just change overwrite statement below to TRUE.
 }

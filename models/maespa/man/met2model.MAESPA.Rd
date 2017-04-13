@@ -2,7 +2,7 @@
 % Please edit documentation in R/met2model.MAESPA.R
 \name{met2model.MAESPA}
 \alias{met2model.MAESPA}
-\title{met2model.MAESPA}
+\title{R Code to convert NetCDF CF met files into MAESPA met files}
 \usage{
 met2model.MAESPA(in.path, in.prefix, outfolder, start_date, end_date,
   overwrite = FALSE, verbose = FALSE, ...)
@@ -23,7 +23,9 @@ met2model.MAESPA(in.path, in.prefix, outfolder, start_date, end_date,
 \item{verbose}{should the function be very verbose}
 }
 \description{
-met2model wrapper for MAESPA
+If files already exist in 'Outfolder', the default function is NOT to overwrite them and only
+gives user the notice that file already exists. If user wants to overwrite the existing files,
+just change overwrite statement below to TRUE.
 }
 \author{
 Tony Gardella

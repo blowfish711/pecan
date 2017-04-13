@@ -2,7 +2,7 @@
 % Please edit documentation in R/write.config.JULES.R
 \name{write.config.JULES}
 \alias{write.config.JULES}
-\title{Write JULES configuration files}
+\title{Writes a JULES config file.}
 \usage{
 write.config.JULES(defaults, trait.values, settings, run.id)
 }
@@ -19,9 +19,6 @@ write.config.JULES(defaults, trait.values, settings, run.id)
 configuration file for JULES for given run
 }
 \description{
-Writes a JULES config file.
-}
-\details{
 Requires a pft xml object, a list of trait values for a single model run,
 and the name of the file to create
 }
