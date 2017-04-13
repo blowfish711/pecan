@@ -7,29 +7,25 @@
 # http://opensource.ncsa.illinois.edu/license.html
 #-------------------------------------------------------------------------------
 
-# R Code to convert NetCDF CF met files into SIPNET met files
-
-## If files already exist in 'Outfolder', the default function is NOT to overwrite them and only
-## gives user the notice that file already exists. If user wants to overwrite the existing files,
-## just change overwrite statement below to TRUE.
-
-##' met2model wrapper for SIPNET
-##'
-##' @title met2model.SIPNET
-##' @export
-##' @param in.path location on disk where inputs are stored
-##' @param in.prefix prefix of input and output files
-##' @param outfolder location on disk where outputs will be stored
-##' @param start_date the start date of the data to be downloaded (will only use the year part of the date)
-##' @param end_date the end date of the data to be downloaded (will only use the year part of the date)
-##' @param overwrite should existing files be overwritten
-##' @param verbose should the function be very verbose
-##' @importFrom ncdf4 ncvar_get
+#' R Code to convert NetCDF CF met files into SIPNET met files
+#'
+#' If files already exist in 'Outfolder', the default function is NOT to overwrite them and only
+#' gives user the notice that file already exists. If user wants to overwrite the existing files,
+#' just change overwrite statement below to TRUE.
+#'
+#' @export
+#' @param in.path location on disk where inputs are stored
+#' @param in.prefix prefix of input and output files
+#' @param outfolder location on disk where outputs will be stored
+#' @param start_date the start date of the data to be downloaded (will only use the year part of the date)
+#' @param end_date the end date of the data to be downloaded (will only use the year part of the date)
+#' @param overwrite should existing files be overwritten
+#' @param verbose should the function be very verbose
+#' @importFrom ncdf4 ncvar_get
 met2model.SIPNET <- function(in.path, in.prefix, outfolder, start_date, end_date, 
                              overwrite = FALSE, verbose = FALSE, ...) {
-  library(PEcAn.utils)
   
-  print("START met2model.SIPNET")
+  PEcAn.utils::logger.info("START met2model.SIPNET")
   start_date <- as.POSIXlt(start_date, tz = "UTC")
   end_date <- as.POSIXlt(end_date, tz = "UTC")
   out.file <- paste(in.prefix, strptime(start_date, "%Y-%m-%d"), 
@@ -46,15 +42,13 @@ met2model.SIPNET <- function(in.path, in.prefix, outfolder, start_date, end_date
                         enddate = end_date, 
                         dbfile.name = out.file, 
                         stringsAsFactors = FALSE)
-  print("internal results")
+  PEcAn.utils::logger.info("internal results")
   print(results)
   
   if (file.exists(out.file.full) && !overwrite) {
-    logger.debug("File '", out.file.full, "' already exists, skipping to next file.")
+    PEcAn.utils::logger.debug("File '", out.file.full, "' already exists, skipping to next file.")
     return(invisible(results))
   }
-  
-  library(PEcAn.data.atmosphere)
   
   ## check to see if the outfolder is defined, if not create directory for output
   if (!file.exists(outfolder)) {
@@ -71,7 +65,7 @@ met2model.SIPNET <- function(in.path, in.prefix, outfolder, start_date, end_date
   for (year in start_year:end_year) {
     
     skip <- FALSE
-    print(year)
+    PEcAn.utils::logger.info(year)
     
     old.file <- file.path(in.path, paste(in.prefix, year, "nc", sep = "."))
     
@@ -82,12 +76,15 @@ met2model.SIPNET <- function(in.path, in.prefix, outfolder, start_date, end_date
       ## convert time to seconds
       sec <- nc$dim$time$vals
       sec <- udunits2::ud.convert(sec, unlist(strsplit(nc$dim$time$units, " "))[1], "seconds")
-      
-      dt <- ifelse(lubridate::leap_year(year) == TRUE, 
-                   366 * 24 * 60 * 60 / length(sec), # leap year
-                   365 * 24 * 60 * 60 / length(sec)) # non-leap year
-      tstep <- round(86400 / dt)
-      dt <- 86400 / tstep
+
+      year_days <- PEcAn.utils::days_in_year(year)
+      year_secs <- udunits2::ud.convert(year_days, 'days', 'seconds')
+      day_secs <- udunits2::ud.convert(1, 'day', 'seconds')
+
+      dt <- year_secs / length(sec)
+
+      tstep <- round(day_secs / dt)
+      dt <- day_secs / tstep
       
       ## extract variables
       lat <- ncvar_get(nc, "latitude")
@@ -116,39 +113,35 @@ met2model.SIPNET <- function(in.path, in.prefix, outfolder, start_date, end_date
         tau <- 15 * tstep
         filt <- exp(-(1:length(Tair)) / tau)
         filt <- (filt / sum(filt))
-        soilT <- convolve(Tair, filt) - 273.15
+        soilT <- udunuts2::ud.convert(convolve(Tair, filt), 'K', 'degC')
       } else {
-        soilT <- soilT - 273.15
+        soilT <- udunuts2::ud.convert(soilT, 'K', 'degC')
       }
       
-      SVP <- udunits2::ud.convert(get.es(Tair - 273.15), "millibar", "Pa")  ## Saturation vapor pressure
+      Tair_C <- udunuts2::ud.convert(Tair, 'K', 'degC')
+      SVP <- udunits2::ud.convert(get.es(Tair_C), "millibar", "Pa")  ## Saturation vapor pressure
       VPD <- try(ncvar_get(nc, "water_vapor_saturation_deficit"))  ## in Pa
       if (!is.numeric(VPD)) {
-        VPD <- SVP * (1 - qair2rh(Qair, Tair - 273.15))
+        VPD <- SVP * (1 - PEcAn.data.atmosphere::qair2rh(Qair, Tair_C))
       }
       e_a <- SVP - VPD
-      VPDsoil <- udunits2::ud.convert(get.es(soilT), "millibar", "Pa") * (1 - qair2rh(Qair, soilT))
+      VPDsoil <- udunits2::ud.convert(get.es(soilT), "millibar", "Pa") * (1 - PEcAn.data.atmosphere::qair2rh(Qair, soilT))
       
       ncdf4::nc_close(nc)
     } else {
-      print("Skipping to next year")
+      PEcAn.utils::logger.info("Skipping to next year")
       next
     }
     
     ## build time variables (year, month, day of year)
-    nyr <- floor(length(sec) / 86400 / 365 * dt)
+    nyr <- floor(length(sec) / day_secs / 365 * dt)
     yr <- NULL
     doy <- NULL
     hr <- NULL
     asec <- sec
     for (y in year + 1:nyr - 1) {
-      ytmp <- rep(y, 365 * 86400 / dt)
-      dtmp <- rep(1:365, each = 86400 / dt)
-      if (lubridate::leap_year(y)) {
-        ## is leap
-        ytmp <- rep(y, 366 * 86400 / dt)
-        dtmp <- rep(1:366, each = 86400 / dt)
-      }
+      ytmp <- rep(y, year_secs / dt)
+      dtmp <- rep(seq_len(year_days), each = day_secs / dt)
       if (is.null(yr)) {
         yr <- ytmp
         doy <- dtmp
@@ -161,25 +154,25 @@ met2model.SIPNET <- function(in.path, in.prefix, outfolder, start_date, end_date
       rng <- length(doy) - length(ytmp):1 + 1
       if (!all(rng >= 0)) {
         skip <- TRUE
-        logger.warn(paste(year, "is not a complete year and will not be included"))
+        PEcAn.utils::logger.warn(paste(year, "is not a complete year and will not be included"))
         break
       }
       asec[rng] <- asec[rng] - asec[rng[1]]
-      hr[rng] <- (asec[rng] - (dtmp - 1) * 86400) / 86400 * 24
+      hr[rng] <- (asec[rng] - (dtmp - 1) * day_secs) / day_secs * 24
     }
     if (length(yr) < length(sec)) {
       rng <- (length(yr) + 1):length(sec)
       if (!all(rng >= 0)) {
         skip <- TRUE
-        logger.warn(paste(year, "is not a complete year and will not be included"))
+        PEcAn.utils::logger.warn(paste(year, "is not a complete year and will not be included"))
         break
       }
       yr[rng] <- rep(y + 1, length(rng))
-      doy[rng] <- rep(1:366, each = 86400 / dt)[1:length(rng)]
-      hr[rng] <- rep(seq(0, length = 86400 / dt, by = dt/86400 * 24), 366)[1:length(rng)]
+      doy[rng] <- rep(1:366, each = day_secs / dt)[1:length(rng)]
+      hr[rng] <- rep(seq(0, length = day_secs / dt, by = dt/day_secs * 24), 366)[1:length(rng)]
     }
     if (skip) {
-      print("Skipping to next year")
+      PEcAn.utils::logger.info("Skipping to next year")
       next
     }
     
@@ -190,8 +183,8 @@ met2model.SIPNET <- function(in.path, in.prefix, outfolder, start_date, end_date
                  yr[1:n],
                  doy[1:n], 
                  hr[1:n], 
-                 rep(dt / 86400, n), 
-                 Tair - 273.15, 
+                 rep(dt / day_secs, n), 
+                 Tair_C, 
                  soilT, 
                  PAR * dt,  # mol/m2/hr 
                  Rain * dt, # converts from mm/s to mm
@@ -204,7 +197,7 @@ met2model.SIPNET <- function(in.path, in.prefix, outfolder, start_date, end_date
     ## quick error check, sometimes get a NA in the last hr
     hr.na <- which(is.na(tmp[, 4]))
     if (length(hr.na) > 0) {
-      tmp[hr.na, 4] <- tmp[hr.na - 1, 4] + dt/86400 * 24
+      tmp[hr.na, 4] <- tmp[hr.na - 1, 4] + dt/day_secs * 24
     }
     
     if (is.null(out)) {
@@ -221,7 +214,7 @@ met2model.SIPNET <- function(in.path, in.prefix, outfolder, start_date, end_date
     write.table(out, out.file.full, quote = FALSE, sep = "\t", row.names = FALSE, col.names = FALSE)
     return(invisible(results))
   } else {
-    print("NO MET TO OUTPUT")
+    PEcAn.utils::logger.info("NO MET TO OUTPUT")
     return(invisible(NULL))
   }
 } # met2model.SIPNET
