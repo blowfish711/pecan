@@ -7,15 +7,12 @@
 # http://opensource.ncsa.illinois.edu/license.html
 #-------------------------------------------------------------------------------
 
-# R Code to convert NetCDF CF met files into LPJ-GUESS met files
-
-## If files already exist in 'Outfolder', the default function is NOT to overwrite them and only
-## gives user the notice that file already exists. If user wants to overwrite the existing files,
-## just change overwrite statement below to TRUE.
-
-##' met2model wrapper for LPJ-GUESS
+##' R Code to convert NetCDF CF met files into LPJ-GUESS met files
 ##'
-##' @title met2model.LPJGUESS
+##' If files already exist in 'Outfolder', the default function is NOT to overwrite them and only
+##' gives user the notice that file already exists. If user wants to overwrite the existing files,
+##' just change overwrite statement below to TRUE.
+##'
 ##' @export
 ##' @param in.path location on disk where inputs are stored
 ##' @param in.prefix prefix of input and output files
@@ -29,9 +26,7 @@
 met2model.LPJGUESS <- function(in.path, in.prefix, outfolder, start_date, end_date, 
                                overwrite = FALSE, verbose = FALSE, ...) {
   
-  library(PEcAn.utils)
-  
-  print("START met2model.LPJGUESS")
+  PEcAn.utils::logger.info("START met2model.LPJGUESS")
   start_date <- as.POSIXlt(start_date, tz = "UTC")
   end_date <- as.POSIXlt(end_date, tz = "UTC")
   start_year <- lubridate::year(start_date)
@@ -63,7 +58,7 @@ met2model.LPJGUESS <- function(in.path, in.prefix, outfolder, start_date, end_da
                         enddate = end_date, 
                         dbfile.name = unlist(out.file), 
                         stringsAsFactors = FALSE)
-  print("internal results")
+  PEcAn.utils::logger.info("internal results")
   print(results)
   
   ## check to see if the outfolder is defined, if not create directory for output
@@ -95,11 +90,8 @@ met2model.LPJGUESS <- function(in.path, in.prefix, outfolder, start_date, end_da
   ## aggregate to daily time steps, LPJ-GUESS reads daily climate data
   tmp.list <- pre.list <- cld.list <- list()
   for (y in seq_len(nyear)) {
-    if (lubridate::leap_year(as.numeric(year[y]))) { 
-      ind.vec <- rep(1:366, each = tstep)
-    } else {
-      ind.vec <- rep(1:365, each = tstep)
-    }
+    year_days <- PEcAn.utils::days_in_year(year[y])
+    ind.vec <- rep(1:year_days, each = tstep)
     tmp.list[[y]] <- tapply(nc.tmp[[y]], ind.vec, mean)
     pre.list[[y]] <- tapply(nc.pre[[y]], ind.vec, mean)
     cld.list[[y]] <- tapply(nc.cld[[y]], ind.vec, mean)
