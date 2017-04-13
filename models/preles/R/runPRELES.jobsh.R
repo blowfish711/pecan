@@ -19,9 +19,7 @@
 ##' @importFrom ncdf4 ncvar_get ncvar_def
 runPRELES.jobsh <- function(met.file, outdir, parameters, sitelat, sitelon, start.date, end.date) {
   
-  library(PEcAn.data.atmosphere)
-  library(PEcAn.utils)
-  library(Rpreles)
+  #library(Rpreles)
   
   # Process start and end dates
   start_date <- as.POSIXlt(start.date, tz = "UTC")
@@ -30,7 +28,7 @@ runPRELES.jobsh <- function(met.file, outdir, parameters, sitelat, sitelon, star
   start_year <- lubridate::year(start_date)
   end_year <- lubridate::year(end_date)
   
-  timestep.s <- 86400  # Number of seconds in a day
+  day_secs <- 86400  # Number of seconds in a day
   
   ## Build met
   met <- NULL
@@ -46,19 +44,15 @@ runPRELES.jobsh <- function(met.file, outdir, parameters, sitelat, sitelon, star
       ## convert time to seconds
       sec <- nc$dim$time$vals
       sec <- udunits2::ud.convert(sec, unlist(strsplit(nc$dim$time$units, " "))[1], "seconds")
-      
+
       ## build day and year
+      year_days <- PEcAn.utils::days_in_year(year)
+      year_secs <- udunits2::ud.convert(year_days, 'days', 'seconds')
+      dt <- year_secs / length(sec)
       
-      dt <- ifelse(lubridate::leap_year(year) == TRUE, 
-                   366 * 24 * 60 * 60 / length(sec), # leap year
-                   365 * 24 * 60 * 60 / length(sec)) # non-leap year
-      tstep <- round(timestep.s / dt)  #time steps per day
+      tstep <- round(day_secs / dt)  #time steps per day
       
-      doy <- rep(1:365, each = tstep)[1:length(sec)]
-      if (year %% 4 == 0) {
-        ## is leap
-        doy <- rep(1:366, each = tstep)[1:length(sec)]
-      }
+      doy <- rep(seq_len(year_days), each = tstep)[1:length(sec)]
       
       ## Get variables from netcdf file
       SW     <- ncvar_get(nc, "surface_downwelling_shortwave_flux_in_air")  # SW in W/m2
@@ -73,19 +67,19 @@ runPRELES.jobsh <- function(met.file, outdir, parameters, sitelat, sitelon, star
       
       ## Check for CO2 and PAR
       if (!is.numeric(CO2)) {
-        logger.warn("CO2 not found. Setting to default: 4.0e+8 mol/mol")  # using rough estimate of atmospheric CO2 levels
+        PEcAn.utils::logger.warn("CO2 not found. Setting to default: 4.0e+8 mol/mol")  # using rough estimate of atmospheric CO2 levels
         CO2 <- rep(4e+08, length(Precip))
       }
       
       ## GET VPD from Saturated humidity and Air Temperature
-      RH <- qair2rh(SH, Tair)
-      VPD <- get.vpd(RH, Tair)
+      RH <- PEcAn.data.atmosphere::qair2rh(SH, Tair)
+      VPD <- PEcAn.data.atmsosphere::get.vpd(RH, Tair)
       
       VPD <- VPD * 0.01  # convert to Pascal
       
       ## Get PPFD from SW
-      PPFD <- sw2ppfd(SW)  # PPFD in umol/m2/s
-      PPFD <- PPFD * 1e-06  # convert umol to mol
+      PPFD <- PEcAn.data.atmosphere::sw2ppfd(SW)  # PPFD in umol/m2/s
+      PPFD <- udunits2::ud.convert(PPFD, 'umol', 'mol') # convert umol to mol
       
       ## Format/convert inputs
       ppfd   <- tapply(PPFD, doy, mean, na.rm = TRUE)  # Find the mean for the day
@@ -93,7 +87,7 @@ runPRELES.jobsh <- function(met.file, outdir, parameters, sitelat, sitelon, star
       vpd    <- udunits2::ud.convert(tapply(VPD, doy, mean, na.rm = TRUE), "Pa", "kPa")  # pascal to kila pascal
       precip <- tapply(Precip, doy, sum, na.rm = TRUE)  # Sum to daily precipitation
       co2    <- tapply(CO2, doy, mean)  # need daily average, so sum up day
-      co2    <- co2 / 1e+06  # convert to ppm
+      co2    <- udunits2::ud.convert(co2, 'kg kg-1', 'ppm') # convert to ppm
       doy    <- tapply(doy, doy, mean)  # day of year
       fapar  <- rep(0.6, length = length(doy))  # For now set to 0.6. Needs to be between 0-1
       
@@ -151,19 +145,19 @@ runPRELES.jobsh <- function(met.file, outdir, parameters, sitelat, sitelon, star
   for (y in years) {
     if (file.exists(file.path(outdir, paste(y)))) 
       next
-    print(paste("----Processing year: ", y))
+    PEcAn.utils::logger.info(paste("----Processing year: ", y))
     
     sub.PRELES.output <- subset(PRELES.output, years == y)
     sub.PRELES.output.dims <- dim(sub.PRELES.output)
     
     output <- list()
-    output[[1]] <- (sub.PRELES.output[, 1] * 0.001)/timestep.s  #GPP - gC/m2day to kgC/m2s1
-    output[[2]] <- (sub.PRELES.output[, 2])/timestep.s  #Evapotranspiration - mm =kg/m2
-    output[[3]] <- (sub.PRELES.output[, 3])/timestep.s  #Soilmoisture - mm = kg/m2
-    output[[4]] <- (sub.PRELES.output[, 4])/timestep.s  #fWE modifier - just a modifier
-    output[[5]] <- (sub.PRELES.output[, 5])/timestep.s  #fW modifier - just a modifier
-    output[[6]] <- (sub.PRELES.output[, 6])/timestep.s  #Evaporation - mm = kg/m2 
-    output[[7]] <- (sub.PRELES.output[, 7])/timestep.s  #transpiration - mm = kg/m2
+    output[[1]] <- (sub.PRELES.output[, 1] * 0.001)/day_secs  #GPP - gC/m2day to kgC/m2s1
+    output[[2]] <- (sub.PRELES.output[, 2])/day_secs  #Evapotranspiration - mm =kg/m2
+    output[[3]] <- (sub.PRELES.output[, 3])/day_secs  #Soilmoisture - mm = kg/m2
+    output[[4]] <- (sub.PRELES.output[, 4])/day_secs  #fWE modifier - just a modifier
+    output[[5]] <- (sub.PRELES.output[, 5])/day_secs  #fW modifier - just a modifier
+    output[[6]] <- (sub.PRELES.output[, 6])/day_secs  #Evaporation - mm = kg/m2 
+    output[[7]] <- (sub.PRELES.output[, 7])/day_secs  #transpiration - mm = kg/m2
     
     t <- ncdf4::ncdim_def(name = "time",
                    units = paste0("days since", y, "-01-01 00:00:00"), 
