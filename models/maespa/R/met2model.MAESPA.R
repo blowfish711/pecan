@@ -7,15 +7,12 @@
 # http://opensource.ncsa.illinois.edu/license.html
 #-------------------------------------------------------------------------------
 
-# R Code to convert NetCDF CF met files into MAESPA met files
-
-## If files already exist in 'Outfolder', the default function is NOT to overwrite them and only
-## gives user the notice that file already exists. If user wants to overwrite the existing files,
-## just change overwrite statement below to TRUE.
-
-##' met2model wrapper for MAESPA
+##' R Code to convert NetCDF CF met files into MAESPA met files
 ##'
-##' @title met2model.MAESPA
+##' If files already exist in 'Outfolder', the default function is NOT to overwrite them and only
+##' gives user the notice that file already exists. If user wants to overwrite the existing files,
+##' just change overwrite statement below to TRUE.
+##'
 ##' @export
 ##' @param in.path location on disk where inputs are stored
 ##' @param in.prefix prefix of input and output files
@@ -30,9 +27,7 @@
 met2model.MAESPA <- function(in.path, in.prefix, outfolder, start_date, end_date, 
                              overwrite = FALSE, verbose = FALSE, ...) {
   
-  library(PEcAn.utils)
-  
-  print("START met2model.MAESPA")
+  PEcAn.utils::logger.info("START met2model.MAESPA")
   start.date <- as.POSIXlt(start_date, tz = "GMT")
   end.date <- as.POSIXlt(end_date, tz = "GMT")
   
@@ -53,16 +48,13 @@ met2model.MAESPA <- function(in.path, in.prefix, outfolder, start_date, end_date
                         dbfile.name = out.file, 
                         stringsAsFactors = FALSE)
   
-  print("internal results")
+  PEcAn.utils::logger.info("internal results")
   print(results)
   
   if (file.exists(out.file.full) && !overwrite) {
-    logger.debug("File '", out.file.full, "' already exists, skipping to next file.")
+    PEcAn.utils::logger.debug("File '", out.file.full, "' already exists, skipping to next file.")
     return(invisible(results))
   }
-  
-  library(PEcAn.data.atmosphere)
-  library(Maeswrap)
   
   ## check to see if the outfolder is defined, if not create directory for output
   if (!file.exists(outfolder)) {
@@ -74,11 +66,16 @@ met2model.MAESPA <- function(in.path, in.prefix, outfolder, start_date, end_date
   # get start/end year since inputs are specified on year basis
   start_year <- lubridate::year(start.date)
   end_year <- lubridate::year(end.date)
+
+  day_secs <- udunits2::ud.convert(1, 'days', 'seconds')
   
   ## loop over files
   for (year in start_year:end_year) {
-    print(year)
-    
+    PEcAn.utils::logger.debug(year)
+
+    year_days <- PEcAn.utils::days_in_year(year)
+    year_secs <- udunits2::ud.convert(year_days, 'days', 'seconds')
+
     old.file <- file.path(in.path, paste(in.prefix, year, "nc", sep = "."))
     
     if (file.exists(old.file)) {
@@ -88,11 +85,9 @@ met2model.MAESPA <- function(in.path, in.prefix, outfolder, start_date, end_date
       sec <- nc$dim$time$vals
       sec <- udunits2::ud.convert(sec, unlist(strsplit(nc$dim$time$units, " "))[1], "seconds")
       
-      dt <- ifelse(lubridate::leap_year(year) == TRUE, 
-                   366 * 24 * 60 * 60 / length(sec), # leap year
-                   365 * 24 * 60 * 60 / length(sec)) # non-leap year
-      tstep <- round(86400 / dt)
-      dt <- 86400 / tstep
+      dt <- year_secs / length(sec)
+      tstep <- round(day_secs / dt)
+      dt <- day_secs / tstep
       
       # Check which variables are available and which are not
 
@@ -108,12 +103,12 @@ met2model.MAESPA <- function(in.path, in.prefix, outfolder, start_date, end_date
       PRESS <- ncvar_get(nc, "air_pressure")  # Pa
       
       ## Convert specific humidity to fractional relative humidity
-      RH <- qair2rh(QAIR, TAIR, PRESS)
+      RH <- PEcAn.data.atmosphere::qair2rh(QAIR, TAIR, PRESS)
       
       ## Process PAR
       if (!is.numeric(PAR)) {
         # Function from data.atmosphere will convert SW to par in W/m2
-        PAR <- sw2par(RAD)
+        PAR <- PEcAn.data.atmosphere::sw2par(RAD)
       } else {
         # convert
         PAR <- udunits2::ud.convert(PAR, "mol", "umol")
@@ -126,15 +121,15 @@ met2model.MAESPA <- function(in.path, in.prefix, outfolder, start_date, end_date
       ### Constant from Environ namelist used instead if CA is nonexistent
       defaultCO2 <- 400
       if (!is.numeric(CA)) {
-        print("Atmospheric CO2 concentration will be set to constant value set in ENVIRON namelist ")
+        PEcAn.utils::logger.info("Atmospheric CO2 concentration will be set to constant value set in ENVIRON namelist ")
         rm(CA)
       } else {
-        CA <- CA * 1e+06
+        CA <- udunits2::ud.convert(CA, 'kg kg-1', 'ppm')
       }
       
       ncdf4::nc_close(nc)
     } else {
-      print("Skipping to next year")
+      PEcAn.utils::logger.info("Skipping to next year")
       next
     }
     
@@ -154,21 +149,19 @@ met2model.MAESPA <- function(in.path, in.prefix, outfolder, start_date, end_date
   
   ### Check for NA
   if (anyNA(out)) {
-    logger.debug("NA introduced in met data. Maespa will not be able to run properly. Please change Met Data Source or Site")
+    PEcAn.utils::logger.debug("NA introduced in met data. Maespa will not be able to run properly. Please change Met Data Source or Site")
   } else {
-    logger.debug("No NA values contained in data")
+    PEcAn.utils::logger.debug("No NA values contained in data")
   }
   
   ## Set Variable names
   columnnames <- colnames(out)
   
-  # Set number of timesteps in a day(timetsep of input data)
-  timesteps <- tstep
   # Set distribution of diffuse radiation incident from the sky.(0.0) is default.
   difsky <- 0.5
   # Change format of date to DD/MM/YY
-  startdate <- paste0(format(as.Date(start_date), "%d/%m/%y"))
-  enddate <- paste0(format(as.Date(end_date), "%d/%m/%y"))
+  startdate <- format(as.Date(start_date), "%d/%m/%y")
+  enddate <- format(as.Date(end_date), "%d/%m/%y")
   
   ## Units of Latitude and longitude
   if (nc$dim$latitude$units == "degree_north") {
@@ -186,17 +179,17 @@ met2model.MAESPA <- function(in.path, in.prefix, outfolder, start_date, end_date
   ## Write output met.dat file
   metfile <- system.file("met.dat", package = "PEcAn.MAESPA")
   
-  met.dat <- replacemetdata(out, oldmetfile = metfile, newmetfile = out.file.full)
+  met.dat <- Maeswrap::replacemetdata(out, oldmetfile = metfile, newmetfile = out.file.full)
   
-  replacePAR(out.file.full, "difsky", "environ", newval = difsky, noquotes = TRUE)
-  replacePAR(out.file.full, "ca", "environ", newval = defaultCO2, noquotes = TRUE)
-  replacePAR(out.file.full, "lat", "latlong", newval = lat, noquotes = TRUE)
-  replacePAR(out.file.full, "long", "latlong", newval = lon, noquotes = TRUE)
-  replacePAR(out.file.full, "lonhem", "latlong", newval = lonunits, noquotes = TRUE)
-  replacePAR(out.file.full, "lathem", "latlong", newval = latunits, noquotes = TRUE)
-  replacePAR(out.file.full, "startdate", "metformat", newval = startdate, noquotes = TRUE)
-  replacePAR(out.file.full, "enddate", "metformat", newval = enddate, noquotes = TRUE)
-  replacePAR(out.file.full, "columns", "metformat", newval = columnnames, noquotes = TRUE)
+  Maeswrap::replacePAR(out.file.full, "difsky", "environ", newval = difsky, noquotes = TRUE)
+  Maeswrap::replacePAR(out.file.full, "ca", "environ", newval = defaultCO2, noquotes = TRUE)
+  Maeswrap::replacePAR(out.file.full, "lat", "latlong", newval = lat, noquotes = TRUE)
+  Maeswrap::replacePAR(out.file.full, "long", "latlong", newval = lon, noquotes = TRUE)
+  Maeswrap::replacePAR(out.file.full, "lonhem", "latlong", newval = lonunits, noquotes = TRUE)
+  Maeswrap::replacePAR(out.file.full, "lathem", "latlong", newval = latunits, noquotes = TRUE)
+  Maeswrap::replacePAR(out.file.full, "startdate", "metformat", newval = startdate, noquotes = TRUE)
+  Maeswrap::replacePAR(out.file.full, "enddate", "metformat", newval = enddate, noquotes = TRUE)
+  Maeswrap::replacePAR(out.file.full, "columns", "metformat", newval = columnnames, noquotes = TRUE)
   
   return(invisible(results))
 } # met2model.MAESPA
