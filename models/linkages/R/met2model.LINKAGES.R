@@ -8,11 +8,11 @@
 #-------------------------------------------------------------------------------
 
 ##-------------------------------------------------------------------------------------------------#
-##' Converts a met CF file to a model specific met file. The input
-##' files are calld <in.path>/<in.prefix>.YYYY.cf
+##' Write met file for LINKAGES model
 ##'
-##' @name met2model.LINKAGES
-##' @title Write LINKAGES met files
+##' Converts a met CF file to a model specific met file. The input
+##' files are called <in.path>/<in.prefix>.YYYY.cf
+##'
 ##' @param in.path path on disk where CF file lives
 ##' @param in.prefix prefix for each file
 ##' @param outfolder location where model specific output is written.
@@ -22,13 +22,14 @@
 ##-------------------------------------------------------------------------------------------------#
 met2model.LINKAGES <- function(in.path, in.prefix, outfolder, start_date, end_date, 
                                overwrite = FALSE, verbose = FALSE, ...) {
-  library(PEcAn.utils)
   
   start_date <- as.POSIXlt(start_date, tz = "GMT")
   end_date <- as.POSIXlt(end_date, tz = "GMT")
   out.file <- file.path(outfolder, "climate.Rdata")
   # out.file <- file.path(outfolder, paste(in.prefix, strptime(start_date, '%Y-%m-%d'),
   # strptime(end_date, '%Y-%m-%d'), 'dat', sep='.'))
+
+  day_secs <- udunits2::ud.convert(1, 'days', 'seconds')
   
   results <- data.frame(file = c(out.file),
                         host = c(fqdn()), 
@@ -38,11 +39,11 @@ met2model.LINKAGES <- function(in.path, in.prefix, outfolder, start_date, end_da
                         enddate = c(end_date), 
                         dbfile.name = "climate.Rdata", 
                         stringsAsFactors = FALSE)
-  print("internal results")
+  PEcAn.utils::logger.info("internal results")
   print(results)
   
   if (file.exists(out.file) && !overwrite) {
-    logger.debug("File '", out.file, "' already exists, skipping to next file.")
+    PEcAn.utils::logger.debug("File '", out.file, "' already exists, skipping to next file.")
     return(invisible(results))
   }
   
@@ -65,7 +66,8 @@ met2model.LINKAGES <- function(in.path, in.prefix, outfolder, start_date, end_da
   nyear <- length(year)  # number of years to simulate
   
   month_matrix_precip <- matrix(NA, nyear, 12)
-  DOY_vec_hr <- c(1, c(32, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335, 365) * 4)
+  DOY_vec_hr <- cumsum(c(1, lubridate::days_in_month(1:11), 365))
+  DOY_vec_hr[-1] <- DOY_vec_hr[-1] * 4
   
   for (i in seq_len(nyear)) {
     ncin <- ncdf4::nc_open(file.path(in.path, paste(in.prefix, year[i], "nc", sep = ".")))
@@ -73,10 +75,11 @@ met2model.LINKAGES <- function(in.path, in.prefix, outfolder, start_date, end_da
     ## convert time to seconds
     sec <- ncin$dim$time$vals
     sec <- udunits2::ud.convert(sec, unlist(strsplit(ncin$dim$time$units, " "))[1], "seconds")
-    dt <- ifelse(lubridate::leap_year(as.numeric(year[i])) == TRUE, 
-                 366 * 24 * 60 * 60 / length(sec), # leap year
-                 365 * 24 * 60 * 60 / length(sec)) # non-leap year
-    tstep <- 86400 / dt
+    year_days <- PEcAn.utils::days_in_year(year[i])
+    year_secs <- udunits2::ud.convert(year_days, 'days', 'seconds')
+    dt <- year_secs / length(sec)
+
+    tstep <- day_secs / dt
     
     ncprecipf <- ncdf4::ncvar_get(ncin, "precipitation_flux")  # units are kg m-2 s-1    
     for (m in 1:12) {
@@ -93,8 +96,7 @@ met2model.LINKAGES <- function(in.path, in.prefix, outfolder, start_date, end_da
     # print(ncin)
     nctemp <- ncdf4::ncvar_get(ncin, "air_temperature")  #units are kg m-2 s-1    
     for (m in 1:12) {
-      month_matrix_temp_mean[i, m] <- (mean(nctemp[DOY_vec_hr[m]:(DOY_vec_hr[m + 1] - 1)]) - 
-                                         273.15)  #sub daily to monthly
+      month_matrix_temp_mean[i, m] <- udunits2::ud.convert(mean(nctemp[DOY_vec_hr[m]:(DOY_vec_hr[m + 1] - 1)]), 'kelvin', 'celsius') #sub daily to monthly
     }
     ncdf4::nc_close(ncin)
     if (i %% 100 == 0) {
