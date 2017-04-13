@@ -31,9 +31,6 @@ met2model.ED2 <- function(in.path, in.prefix, outfolder, start_date, end_date, l
                           lon = NA, overwrite = FALSE, verbose = FALSE, ...) {
   overwrite <- as.logical(overwrite)
 
-  # deprecated?  
-  library(PEcAn.utils)
-
   # Constants
   day_secs <- udunits2::ud.convert(1, 'days', 'seconds')
   deg2rad <- pi/180
