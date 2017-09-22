@@ -122,8 +122,12 @@ write.config.ED2 <- function(trait.values, settings, run.id, defaults = settings
   
   ##----------------------------------------------------------------------
   ## Edit ED2IN file for runs
-  if (!is.null(settings$model$edin) && file.exists(settings$model$edin)) {
-    ed2in.text <- readLines(con = settings$model$edin, n = -1)
+  if (!is.null(settings$model$edin)) {
+    if (file.exists(settings$model$edin)) {
+      ed2in.text <- readLines(con = settings$model$edin, n = -1)
+    } else {
+      PEcAn.logger::logger.error("Specified file ", settings$model$edin, " not found. Using default ED2IN for given version.")
+    }
   } else {
     filename <- system.file(settings$model$edin, package = "PEcAn.ED2")
     if (filename == "") {
@@ -268,16 +272,45 @@ write.config.ED2 <- function(trait.values, settings, run.id, defaults = settings
   ed2in.text <- gsub("@CONFIGFILE@", file.path(settings$host$rundir, run.id, "config.xml"), ed2in.text)
   # ed2in.text <- gsub('@CONFIGFILE@','config.xml', ed2in.text) # for ED2.r81 on Kang.  Temporary
   # hack
-  
+
   ##----------------------------------------------------------------------
   ed2in.text <- gsub("@FFILOUT@", file.path(modeloutdir, "analysis"), ed2in.text)
   ed2in.text <- gsub("@SFILOUT@", file.path(modeloutdir, "history"), ed2in.text)
 
+  ##----------------------------------------------------------------------
+  # ED soil inputs
+  soil_list <- settings$run$inputs$soil
+  if (!is.null(soil_list)) {
+    soil_file <- soil_list$path
+    soil_nc <- ncdf4::nc_open(soil_file, write = FALSE)
+    soil_values <- list()
+
+    # Parameters
+    depths <- ncdf4::ncvar_get(soil_nc, varid = "depth")
+    n_depths <- length(depths)
+    soil_values[['NZG']] <- n_depths
+    soil_values[['SLXCLAY']] <- ncdf4::ncvar_get(soil_nc, varid = "volume_fraction_of_clay_in_soil")
+    soil_values[['SLXSAND']] <- ncdf4::ncvar_get(soil_nc, varid = "volume_fraction_of_sand_in_soil")
+
+    # Initial conditions
+    if (!all(depths >= 0)) {
+      PEcAn.logger::logger.info("Soil depths: ", paste(depths, collapse = ', '))
+      PEcAn.logger::logger.severe("Not all depths are positive or zero. Something is wrong with the soil file.")
+    }
+    soil_values[['SLZ']] <- depths * -1.0     # Must be negative. Start with the deepest and become less negative towards the surface.
+    # soil_values[['SLMSTR']] <- ???   # Soil moisture
+    # soil_values[['STGOFF']] <- ???   # Initial temperature offset
+
+    ed2in.text <- ed2in_set_value_list(soil_values, ed2in.text,
+                                       paste0("PEcAn: Soil properties from ", soil_file))
+
+  }
+
   ##---------------------------------------------------------------------
   # Modify any additional tags provided in settings$model$ed2in
-  ed2in.text <- ed2in_set_value_list(settings$model$ed2in, ed2in.text, 
+  ed2in.text <- ed2in_set_value_list(settings$model$ed2in, ed2in.text,
                                      "PEcAn: Custom argument from pecan.xml")
-  
+
   ##----------------------------------------------------------------------
   writeLines(ed2in.text, con = file.path(settings$rundir, run.id, "ED2IN"))
 } # write.config.ED2
