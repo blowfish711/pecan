@@ -3,32 +3,30 @@
 #' Automatically defines an RTM model based on the observed wavelengths and 
 #' spectra type.
 #'
-#' Spectra type must be one of the following:
-#'  - "R" -- Reflectance (default)
-#'  - "T" -- Transmittance
-#'  - "RT" -- Reflectance and transmittance, in separate columns. This requires 
-#'  that the observation.
-#'  - "PA" -- Pseudo-absorbance, defined as `log10(1 / reflectance)`
-#'  - "CRR" -- Continuum-removed reflectance. See 
-#'  [prospectr::continuumRemoval]. Requires the `prospectr` package.
-#'
 #' @param spectra Observed spectra to invert. Must be class [spectra].
-#' @param type Type of observation, one of "R", "T", "PA", or "CRR" (see Details)
 #' @param prospect_version Version of PROSPECT to use. Default is "5B".
 #' @param ...  Additional arguments to [invert_bt]
+#' @inheritParams spectra
 #' @inheritParams resample
 #' @inheritParams invert_bt
 #' @export
-invert_fieldspec <- function(spectra, type = "R", method = "fmm",
+invert_fieldspec <- function(spectra, type = spectra_type(spectra), method = "fmm",
                              prospect_version = 5,
                              prior = prospect_bt_prior(prospect_version),
                              ...) {
-  used_types <- c("R", "T", "RT", "PA", "CRR")
-  if (!type %in% used_types) {
+  if (!type %in% valid_spectra_types) {
     stop(
       "Invalid type '", type, "'. ",
       "Must be one of the following: ",
-      paste(shQuote(used_types), collapse = ", ")
+      paste(valid_spectra_types, collapse = ", ")
+    )
+  }
+
+  if (length(unique(type)) > 1) {
+    stop(
+      "Spectra must all be of the same type. ",
+      "For more advanced inversions with multiple spectra types, ",
+      "use `invert_bt` with a custom `model` argument."
     )
   }
 
@@ -51,7 +49,6 @@ invert_fieldspec <- function(spectra, type = "R", method = "fmm",
     type,
     `R` = function(param) prospect(param, prospect_version)[, 1],
     `T` = function(param) prospect(param, prospect_version)[, 2],
-    `RT` = function(param) prospect(param, prospect_version),
     `PA` = function(param) log10(1 / prospect(param, prospect_version)[, 1]),
     `CRR` = function(param) {
       prospectr::continuumRemoval(prospect(param, prospect_version)[, 1])

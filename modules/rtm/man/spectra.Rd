@@ -5,7 +5,7 @@
 \alias{is_spectra}
 \title{Spectra S3 class}
 \usage{
-spectra(spectra, wavelengths = 400:2500)
+spectra(spectra, wavelengths = 400:2500, type = "R")
 
 is_spectra(spectra)
 }
@@ -13,6 +13,8 @@ is_spectra(spectra)
 \item{spectra}{Vector (\code{length = length(wavelengths)}) or matrix (\code{ncol = length(wavelengths)})}
 
 \item{wavelengths}{Wavelengths of spectra.}
+
+\item{type}{Type of spectra, one of "R", "T", "PA", or "CRR" (see \link{valid_spectra_types}).}
 }
 \description{
 Spectra S3 class

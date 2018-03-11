@@ -71,7 +71,7 @@ if (Sys.getenv('CI') == 'true') {
 
     if (interactive()) {
         par(mfrow = c(1,1))
-        plot(observed, type = 'l')
+        plot(400:2500, observed, type = 'l')
         lines(400:2500, mid, col = 'red')
         polygon(pi_x, pi_y, col = rgb(1, 0, 0, 0.2), border = 'red', lty = 'dashed')
         legend(

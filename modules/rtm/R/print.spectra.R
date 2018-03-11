@@ -9,6 +9,9 @@ print.spectra <- function(spectra, n = 10, ...) {
   class(out) <- "matrix"
   rownames(out) <- as.character(wavelengths(spectra))
   attr(out, "wavelengths") <- NULL
+  spec_types <- spectra_type(spectra)
+  attr(out, "spectra_type") <- NULL
+  colnames(out) <- sprintf("%s <%s>", colnames(out), spec_types)
   if (nrow(out) > n) {
     head_str <- head(out, ceiling(n / 2))
     tail_str <- tail(out, ceiling(n / 2))
