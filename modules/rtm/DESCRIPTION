@@ -24,7 +24,8 @@ Suggests:
     XML,
     testthat (>= 1.0.2),
     knitr,
-    pwr
+    pwr,
+    prospectr
 OS_type: unix
 License: FreeBSD + file LICENSE
 Copyright: Authors
