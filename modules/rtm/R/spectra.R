@@ -15,16 +15,16 @@ spectra <- function(spectra, wavelengths = 400:2500, spectra_types = "R") {
     err <- sprintf("Number of wavelengths (%d) does not match rows in matrix (%d)", nwl, nr)
     stop(err)
   }
-  if (!(length(type) == 1 || length(type) == ncol(spectra))) {
-    err <- sprintf("Type vector must be length 1 or `ncol(spectra)` (%d). Input is length %d",
-                   ncol(spectra), length(type))
+  if (!(length(spectra_types) == 1 || length(spectra_types) == ncol(spectra))) {
+    err <- sprintf("`spectra_types` must be length 1 or `ncol(spectra)` (%d). Input is length %d",
+                   ncol(spectra), length(spectra_types))
     stop(err)
   }
   structure(
     spectra,
     wavelengths = wavelengths,
     class = c("spectra", "matrix"),
-    spectra_types = type
+    spectra_types = spectra_types
   )
 }
 
