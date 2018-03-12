@@ -7,7 +7,7 @@ cbind.spectra <- function(...) {
   lens <- vapply(dots, ncol, numeric(1))
   waves <- lapply(dots, wavelengths)
   new_waves <- Reduce(union, waves)
-  types <- lapply(dots, spectra_type)
+  types <- lapply(dots, spectra_types)
   types2 <- Map(rep_if_one, types, lens)
   new_types <- Reduce(c, types2)
   names_list <- lapply(dots, colnames)

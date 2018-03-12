@@ -4,13 +4,11 @@
 \alias{invert_fieldspec}
 \title{Quickly invert a field spectrum}
 \usage{
-invert_fieldspec(spectra, type = spectra_type(spectra), method = "fmm",
+invert_fieldspec(spectra, type = spectra_types(spectra), method = "fmm",
   prospect_version = 5, prior = prospect_bt_prior(prospect_version), ...)
 }
 \arguments{
 \item{spectra}{Observed spectra to invert. Must be class \link{spectra}.}
-
-\item{type}{Type of spectra, one of "R", "T", "PA", or "CRR" (see \link{valid_spectra_types}).}
 
 \item{method}{One of the methods for \code{\link[stats:splinefun]{stats::splinefun()}} (for polynomial
 and periodic splines) or \code{\link[stats:approxfun]{stats::approxfun()}} (for constant or linear).

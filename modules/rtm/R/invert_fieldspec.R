@@ -10,7 +10,7 @@
 #' @inheritParams resample
 #' @inheritParams invert_bt
 #' @export
-invert_fieldspec <- function(spectra, type = spectra_type(spectra), method = "fmm",
+invert_fieldspec <- function(spectra, type = spectra_types(spectra), method = "fmm",
                              prospect_version = 5,
                              prior = prospect_bt_prior(prospect_version),
                              ...) {

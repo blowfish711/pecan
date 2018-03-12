@@ -9,8 +9,6 @@
 \arguments{
 \item{spectra}{Vector (\code{length = length(wavelengths)}) or matrix (\code{ncol = length(wavelengths)})}
 
-\item{type}{Type of spectra, one of "R", "T", "PA", or "CRR" (see \link{valid_spectra_types}).}
-
 \item{...}{Additional arguments to \code{plot}}
 }
 \description{

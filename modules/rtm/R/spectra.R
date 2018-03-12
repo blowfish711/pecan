@@ -2,9 +2,9 @@
 #'
 #' @param spectra Vector (`length = length(wavelengths)`) or matrix (`ncol = length(wavelengths)`)
 #' @param wavelengths Wavelengths of spectra. 
-#' @param type Type of spectra, one of "R", "T", "PA", or "CRR" (see [valid_spectra_types]).
+#' @param spectra_types Type of spectra, one of "R", "T", "PA", or "CRR" (see [valid_spectra_types]).
 #' @export
-spectra <- function(spectra, wavelengths = 400:2500, type = "R") {
+spectra <- function(spectra, wavelengths = 400:2500, spectra_types = "R") {
   if (!is.matrix(spectra)) {
     spectra <- as.matrix(spectra)
   }
@@ -24,7 +24,7 @@ spectra <- function(spectra, wavelengths = 400:2500, type = "R") {
     spectra,
     wavelengths = wavelengths,
     class = c("spectra", "matrix"),
-    spectra_type = type
+    spectra_types = type
   )
 }
 
@@ -42,7 +42,7 @@ wavelengths <- function(spectra) attr(spectra, "wavelengths")
 #'
 #' @inheritParams wavelengths
 #' @export
-spectra_type <- function(spectra) attr(spectra, "spectra_type")
+spectra_types <- function(spectra) attr(spectra, "spectra_types")
 
 #' Valid types of spectra, for use in [spectra], [invert_fieldspec], and elsewhere
 #'
