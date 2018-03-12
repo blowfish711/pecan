@@ -12,8 +12,10 @@
   }
   wl <- wavelengths(spectra)
   wl_sub <- wl[i]
+  types <- spectra_types(spectra)
+  type_sub <- types[j]
   values <- .subset(spectra, i = i, j = j, drop = drop)
-  spectra(values, wl_sub)
+  spectra(values, wl_sub, spectra_type = type_sub)
 }
 
 #' Select spectra by wavelength
