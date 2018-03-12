@@ -14,7 +14,7 @@ cbind.spectra <- function(...) {
   m <- spectra(
     matrix(NA_real_, length(new_waves), sum(lens)),
     wavelengths = new_waves,
-    type = new_types
+    spectra_types = new_types
   )
   colnames(m) <- as.character(seq(1, sum(lens)))
   j <- 1
