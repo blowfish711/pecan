@@ -5,6 +5,8 @@
 #'
 #' @param spectra Observed spectra to invert. Must be class [spectra].
 #' @param prospect_version Version of PROSPECT to use. Default is "5B".
+#' @param test Logical. If `TRUE`, test that model and observations match 
+#' before starting sampling.
 #' @param ...  Additional arguments to [invert_bt]
 #' @inheritParams spectra
 #' @inheritParams resample
@@ -13,6 +15,7 @@
 invert_fieldspec <- function(spectra, type = spectra_types(spectra), method = "fmm",
                              prospect_version = 5,
                              prior = prospect_bt_prior(prospect_version),
+                             test = TRUE,
                              ...) {
   if (!type %in% valid_spectra_types) {
     stop(
@@ -37,14 +40,6 @@ invert_fieldspec <- function(spectra, type = spectra_types(spectra), method = "f
     )
   }
 
-  if (type == "RT" && ncol(spectra) %% 2 != 0) {
-    stop(
-      "For type `RT`, spectra must have even number of columns, ",
-      "with reflectance and transmittance in alternating columns. ",
-      "Input has ", ncol(spectra), " columns."
-    )
-  }
-
   rtm <- switch(
     type,
     `R` = function(param) prospect(param, prospect_version)[, 1],
@@ -60,6 +55,21 @@ invert_fieldspec <- function(spectra, type = spectra_types(spectra), method = "f
   model <- function(param) {
     spec <- rtm(param)
     resample(spec, waves, method = method)
+  }
+
+  if (test) {
+    test_params <- prior$sampler()
+    test_params <- test_params[-length(test_params)]
+    test_model <- model(test_params)
+
+    nr_obs <- ifelse(is.null(dim(observed)), length(observed), nrow(observed))
+    if (nr_obs != nrow(test_model)) {
+      stop(
+        "Model and observation dimensions are not compatible. ",
+        "Observation has ", nr_obs, " rows, but model has ",
+        nrow(test_model), "."
+      )
+    }
   }
 
   invert_bt(

@@ -5,7 +5,8 @@
 \title{Quickly invert a field spectrum}
 \usage{
 invert_fieldspec(spectra, type = spectra_types(spectra), method = "fmm",
-  prospect_version = 5, prior = prospect_bt_prior(prospect_version), ...)
+  prospect_version = 5, prior = prospect_bt_prior(prospect_version),
+  test = TRUE, ...)
 }
 \arguments{
 \item{spectra}{Observed spectra to invert. Must be class \link{spectra}.}
@@ -17,6 +18,9 @@ Default is \code{"fmm"} (same as splinefun).}
 \item{prospect_version}{Version of PROSPECT to use. Default is "5B".}
 
 \item{prior}{BayesianTools prior object.}
+
+\item{test}{Logical. If \code{TRUE}, test that model and observations match
+before starting sampling.}
 
 \item{...}{Additional arguments to \link{invert_bt}}
 }
