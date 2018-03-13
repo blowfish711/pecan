@@ -4,9 +4,8 @@
 \alias{invert_fieldspec}
 \title{Quickly invert a field spectrum}
 \usage{
-invert_fieldspec(spectra, type = spectra_types(spectra), method = "fmm",
-  prospect_version = 5, prior = prospect_bt_prior(prospect_version),
-  test = TRUE, ...)
+invert_fieldspec(spectra, method = "fmm", prospect_version = 5,
+  prior = prospect_bt_prior(prospect_version), test = TRUE, ...)
 }
 \arguments{
 \item{spectra}{Observed spectra to invert. Must be class \link{spectra}.}

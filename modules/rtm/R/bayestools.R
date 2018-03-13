@@ -1,5 +1,5 @@
 #' Generic log-likelihood generator for RTMs
-rtm_loglike <- function(nparams, model, observed, lag.max = NULL, verbose = TRUE, ...) {
+rtm_loglike <- function(nparams, model, observed, sweep = FALSE, lag.max = NULL, verbose = TRUE, ...) {
   fail_ll <- -1e10
   stopifnot(nparams >= 1, nparams %% 1 == 0, is.function(model), is.numeric(observed))
   n_obs <- length(observed)
@@ -11,7 +11,11 @@ rtm_loglike <- function(nparams, model, observed, lag.max = NULL, verbose = TRUE
       if (verbose) message(sum(is.na(mod)), " NA values in model output. Returning loglike = ", fail_ll)
       return(fail_ll)
     }
-    err <- mod - observed
+    if (sweep) {
+      err <- sweep(-observed, 1, mod, "+")
+    } else {
+      err <- mod - observed
+    }
     ss <- sum(err * err)
     sigma2 <- rsd * rsd
     # Effective sample size normalization.
@@ -115,6 +119,10 @@ prospect_bt_prior <- function(version, custom_prior = list()) {
 #'      iterations. If `NULL` (default), do not save progress samples.
 #'      - `threshold` -- Threshold for Gelman PSRF convergence diagnostic. Default is 1.1.
 #'      - `verbose_loglike` -- Diagnostic messages in log likelihood output. Default is TRUE.
+#'      - `sweep` -- If `TRUE`, use `sweep` to calculate error in likelihood. 
+#'      If `FALSE`, use direct subtraction, which is faster, but may fail if 
+#'      elements have different sizes. If `NULL` (default), figure this out by 
+#'      running `model` and comparing to `observed`.
 #'
 #' See the BayesianTools sampler documentation for what can go in the `BayesianTools` settings lists.
 #' @param observed Vector of observations. Ignored if `loglike` is not `NULL`.
@@ -125,8 +133,10 @@ prospect_bt_prior <- function(version, custom_prior = list()) {
 #' @param custom_settings Nested settings list. See Details.
 #' @param loglike Custom log likelihood function. If `NULL`, use [rtm_loglike] 
 #' with provided `observed` and `model`.
+#' @param test Logical. If `TRUE`,  run the log likelihood once to make sure it 
+#' doesn't return an error before starting sampling. Default = `FALSE`.
 #' @export
-invert_bt <- function(observed, model, prior, custom_settings = list(), loglike = NULL) {
+invert_bt <- function(observed, model, prior, custom_settings = list(), loglike = NULL, test = FALSE) {
 
   default_settings <- list(
     common = list(),
@@ -140,7 +150,8 @@ invert_bt <- function(observed, model, prior, custom_settings = list(), loglike 
       lag.max = NULL,
       save_progress = NULL,
       threshold = 1.1,
-      verbose_loglike = TRUE
+      verbose_loglike = TRUE,
+      sweep = NULL
     )
   )
 
@@ -166,6 +177,7 @@ invert_bt <- function(observed, model, prior, custom_settings = list(), loglike 
   save_progress <- settings[['other']][['save_progress']]
   threshold <- settings[['other']][['threshold']]
   verbose_loglike <- settings[['other']][['verbose_loglike']]
+  sweep <- settings[["other"]][["sweep"]]
 
   if (!is.null(save_progress)) {
     # `file.create` returns FALSE if target directory doesn't exist.
@@ -182,13 +194,52 @@ invert_bt <- function(observed, model, prior, custom_settings = list(), loglike 
     }
   }
   nparams <- length(test_samp[param_names != 'residual'])
+
+  if (is.null(sweep)) {
+    observed_is_matrix <- !is.null(dim(observed))
+    n_obs <- ifelse(observed_is_matrix, length(observed), nrow(observed))
+    try_model <- model(prior$sampler()[seq_len(nparams)])
+    if (is.null(dim(try_model))) {
+      # Model returns a vector. Arithmetic should work.
+      matching_dims <- n_obs == length(try_model)
+      sweep <- FALSE
+    } else if (observed_is_matrix && ncol(try_model) == ncol(observed)) {
+      # Aligned matrices. Arithmetic should still work.
+      matching_dims <- n_obs == nrow(try_model)
+      sweep <- FALSE
+    } else if (observed_is_matrix && ncol(try_model) == 1) {
+      #message(
+        #"Model returns an N x 1 matrix but observed is N x M matrix. ",
+        #"Likelihood will use `sweep` to calculate residual error, ",
+        #"which is slower than direct arithmetic. ",
+        #"If possible, convert `model` output to a vector."
+      #)
+      sweep <- TRUE
+      matching_dims <- TRUE
+    } else {
+      matching_dims <- FALSE
+    }
+    if (!matching_dims) {
+      stop("Dimension mismatch between observation and model.")
+    }
+  }
+
   if (is.null(loglike)) {
     loglike <- rtm_loglike(
       nparams = nparams,
       model = model,
       observed = observed,
       lag.max = lag.max,
-      verbose = verbose_loglike
+      verbose = verbose_loglike,
+      sweep = sweep
+    )
+  }
+
+  if (test) {
+    try_model <- tryCatch(
+      loglike(prior$sampler()),
+      warning = function(w) stop("Warning in log-likelihood function: ", w),
+      error = function(e) stop("Error in log-likelihood function: ", e)
     )
   }
 

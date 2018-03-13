@@ -4,7 +4,8 @@
 \alias{invert_bt}
 \title{Perform Bayesian inversion using BayesianTools package}
 \usage{
-invert_bt(observed, model, prior, custom_settings = list(), loglike = NULL)
+invert_bt(observed, model, prior, custom_settings = list(), loglike = NULL,
+  test = FALSE)
 }
 \arguments{
 \item{observed}{Vector of observations. Ignored if \code{loglike} is not \code{NULL}.}
@@ -19,6 +20,9 @@ if \code{loglike} is not \code{NULL}.}
 
 \item{loglike}{Custom log likelihood function. If \code{NULL}, use \link{rtm_loglike}
 with provided \code{observed} and \code{model}.}
+
+\item{test}{Logical. If \code{TRUE},  run the log likelihood once to make sure it
+doesn't return an error before starting sampling. Default = \code{FALSE}.}
 }
 \description{
 Use samplers from the BayesianTools package to fit models to data. Like
@@ -51,6 +55,10 @@ Default is \code{10 * log10(n)} (same as \code{stats::acf} function).
 iterations. If \code{NULL} (default), do not save progress samples.
 \item \code{threshold} -- Threshold for Gelman PSRF convergence diagnostic. Default is 1.1.
 \item \code{verbose_loglike} -- Diagnostic messages in log likelihood output. Default is TRUE.
+\item \code{sweep} -- If \code{TRUE}, use \code{sweep} to calculate error in likelihood.
+If \code{FALSE}, use direct subtraction, which is faster, but may fail if
+elements have different sizes. If \code{NULL} (default), figure this out by
+running \code{model} and comparing to \code{observed}.
 }
 }
 
