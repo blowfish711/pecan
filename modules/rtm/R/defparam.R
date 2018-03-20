@@ -5,7 +5,7 @@
 #' @return Named vector of default parameter values
 #' @export
 defparam <- function(modname) {
-  data(model.list)
+  data(model.list, package = "PEcAnRTM")
   model.list$modname <- trimws(model.list$modname)
   p.raw   <- model.list[model.list$modname == modname, "par.default"]
   p.split <- strsplit(trimws(as.character(p.raw)), " ")[[1]]

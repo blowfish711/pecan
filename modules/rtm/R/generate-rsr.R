@@ -37,7 +37,7 @@ trim.rsr <- function(rsr, wl.min = 400, wl.max = 2500) {
 #' Only needs to be called when updating these funcitons with new 
 #' data
 generate.rsr.all <- function(path.to.licor = NULL) {
-  data(raw.sensor.data)
+  data(raw.sensor.data, package = "PEcAnRTM")
   rsr.aviris.ng      <- with(fwhm.aviris.ng, rsr.from.fwhm(Wavelength, fwhm))
   rsr.aviris.classic <- with(fwhm.aviris.classic, rsr.from.fwhm(avg, fwhm))
   rsr.hyperion       <- with(fwhm.hyperion, rsr.from.fwhm(avg, rng))
