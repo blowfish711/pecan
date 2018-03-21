@@ -41,7 +41,7 @@ For more information about this file see also [Keep a Changelog](http://keepacha
 - Updated model2netcdf.MAAT to use ncdf4::ncvar_def to define netCDF variables
 - Fixed an remote code execution discovered by NCSA security team.
 - Column name changes for newly generated biocromet csvs: `SolarR` is now `solar` and `WS` is now `windspeed`. Previously generated met files with the old names will still work for BioCro 0.9 runs, but will need to be renamed before using them with BioCro 1.0.
-- write.configs.BIOCRO now requires a model version specification so that it can format parameters to match your version of BioCro. Set it in your Bety model record or in the model$revision field of your pecan.xml.
+- write.configs.BIOCRO now requires a model version specification so that it can format parameters to match your version of BioCro. Set it in your Bety model record or in the model\$revision field of your pecan.xml.
 - When using BioCro 1.0 and no parameter file is given, PEcAn will make an attempt to find default parameters for your genus in the datasets provided by the BioCro package. Note that the default parameter files provided in `models/biocro/inst/extdata/defaults` will *not* work when using BioCro 1.0.
 - Added documentation how to submit a run from the command line
 - Updated models/maat to provide support for latest model code updates
