@@ -12,10 +12,11 @@ prospect(param, version)
 * Cab: Leaf chlorophyll content (ug/cm2) (>0)
 * (5) Car: Leaf carotenoid content (ug/cm2) (>0)
 * (5B) Cbrown: Leaf brown matter content (ug/cm2) (>0)
+* (D) Canth: Leaf anthocyanin content (ug/cm2) (>0)
 * Cw: Leaf water content (cm) (>0)
 * Cm: Leaf dry matter content (ug/cm2) (>0)}
 
-\item{version}{PROSPECT version: 4, 5, or '5B'}
+\item{version}{PROSPECT version: 4, 5, '5B', or 'D'}
 }
 \value{
 Object of class \code{spectra} (see \code{\link[=spectra]{spectra()}}) with simulated

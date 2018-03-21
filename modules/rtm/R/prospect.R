@@ -7,9 +7,10 @@
 #'     * Cab: Leaf chlorophyll content (ug/cm2) (>0)
 #'     * (5) Car: Leaf carotenoid content (ug/cm2) (>0)
 #'     * (5B) Cbrown: Leaf brown matter content (ug/cm2) (>0)
+#'     * (D) Canth: Leaf anthocyanin content (ug/cm2) (>0)
 #'     * Cw: Leaf water content (cm) (>0)
 #'     * Cm: Leaf dry matter content (ug/cm2) (>0)
-#' @param version PROSPECT version: 4, 5, or '5B'
+#' @param version PROSPECT version: 4, 5, '5B', or 'D'
 #' @return Object of class `spectra` (see [spectra()]) with simulated 
 #' reflectance (column 1) and transmittance (column 2) from 400 to 2500 nm
 #' @export
@@ -44,7 +45,11 @@ prospect <- function(param, version) {
   }
   
   outlist <- do.call(.Fortran, inlist)
-  out <- spectra(outlist[[length(outlist)]], 400:2500)
+  out <- spectra(
+    outlist[[length(outlist)]],
+    400:2500,
+    spectra_types = c("R", "T")
+  )
   colnames(out) <- c("reflectance", "transmittance")
   out
 } # prospect
