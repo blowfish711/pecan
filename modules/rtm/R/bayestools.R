@@ -16,7 +16,7 @@ rtm_loglike <- function(nparams, model, observed, sweep = FALSE, lag.max = NULL,
     } else {
       err <- mod - observed
     }
-    ss <- sum(err * err)
+    ss <- sum(err * err, na.rm = TRUE)
     sigma2 <- rsd * rsd
     # Effective sample size normalization.
     # Turning this on gives weird results.
