@@ -4,10 +4,18 @@
 \alias{matplot.spectra}
 \title{Plot multiple spectra on same graph}
 \usage{
-\method{matplot}{spectra}(spectra, ...)
+\method{matplot}{spectra}(spectra, type = "l", ...)
 }
 \arguments{
 \item{spectra}{Vector (\code{length = length(wavelengths)}) or matrix (\code{ncol = length(wavelengths)})}
+
+\item{type}{character string (length 1 vector) or vector of 1-character
+    strings indicating the type of plot for each
+    column of \code{y}, see \code{\link{plot}} for all possible
+    \code{type}s.  The first character of \code{type}
+    defines the first plot, the second character the second, etc.
+    Characters in \code{type} are cycled through; e.g., \code{"pl"}
+    alternately plots points and lines.}
 
 \item{...}{Additional arguments to \code{matplot}}
 }

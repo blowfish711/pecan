@@ -13,10 +13,11 @@ matplot.default <- function(...) graphics::matplot(...)
 #' Plot multiple spectra on same graph
 #'
 #' @inheritParams is_spectra
+#' @inheritParams graphics::matplot
 #' @param ... Additional arguments to `matplot`
 #' @export
-matplot.spectra <- function(spectra, ...) {
+matplot.spectra <- function(spectra, type = "l", ...) {
   wavelength <- wavelengths(spectra)
   value <- spectra
-  matplot(x = wavelength, y = value, type = "l", ...)
+  matplot(x = wavelength, y = value, type = type, ...)
 }
