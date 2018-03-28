@@ -14,7 +14,7 @@ is_spectra(spectra)
 
 \item{wavelengths}{Wavelengths of spectra.}
 
-\item{spectra_types}{Type of spectra, one of "R", "T", "PA", or "CRR" (see \link{valid_spectra_types}).}
+\item{spectra_types}{Type of spectra, one of "R", "T", "A", "PA", or "CRR" (see \link{valid_spectra_types}).}
 }
 \description{
 Spectra S3 class

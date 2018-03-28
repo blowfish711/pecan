@@ -2,7 +2,7 @@
 #'
 #' @param spectra Vector (`length = length(wavelengths)`) or matrix (`ncol = length(wavelengths)`)
 #' @param wavelengths Wavelengths of spectra. 
-#' @param spectra_types Type of spectra, one of "R", "T", "PA", or "CRR" (see [valid_spectra_types]).
+#' @param spectra_types Type of spectra, one of "R", "T", "A", "PA", or "CRR" (see [valid_spectra_types]).
 #' @export
 spectra <- function(spectra, wavelengths = 400:2500, spectra_types = "R") {
   if (!is.matrix(spectra)) {
@@ -49,9 +49,10 @@ spectra_types <- function(spectra) attr(spectra, "spectra_types")
 #' Spectra type must be one of the following:
 #'  - "R" -- Reflectance (default)
 #'  - "T" -- Transmittance
+#'  - "A" -- Absorbance
 #'  - "PA" -- Pseudo-absorbance, defined as `log10(1 / reflectance)`
 #'  - "CRR" -- Continuum-removed reflectance. See 
 #'  [prospectr::continuumRemoval]. Requires the `prospectr` package.
 #'
 #' @export
-valid_spectra_types <- c("R", "T", "PA", "CRR")
+valid_spectra_types <- c("R", "T", "A", "PA", "CRR")

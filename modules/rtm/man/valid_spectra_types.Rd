@@ -4,7 +4,7 @@
 \name{valid_spectra_types}
 \alias{valid_spectra_types}
 \title{Valid types of spectra, for use in \link{spectra}, \link{invert_fieldspec}, and elsewhere}
-\format{An object of class \code{character} of length 4.}
+\format{An object of class \code{character} of length 5.}
 \usage{
 valid_spectra_types
 }
@@ -13,6 +13,7 @@ Spectra type must be one of the following:
 \itemize{
 \item "R" -- Reflectance (default)
 \item "T" -- Transmittance
+\item "A" -- Absorbance
 \item "PA" -- Pseudo-absorbance, defined as \code{log10(1 / reflectance)}
 \item "CRR" -- Continuum-removed reflectance. See
 \link[prospectr:continuumRemoval]{prospectr::continuumRemoval}. Requires the \code{prospectr} package.
