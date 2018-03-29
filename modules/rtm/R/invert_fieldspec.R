@@ -12,7 +12,8 @@
 #' @inheritParams resample
 #' @inheritParams invert_bt
 #' @export
-invert_fieldspec <- function(spectra, method = "fmm",
+invert_fieldspec <- function(spectra,
+                             method = "fmm",
                              prospect_version = 5,
                              prior = prospect_bt_prior(prospect_version),
                              test = TRUE,
@@ -53,6 +54,14 @@ invert_fieldspec <- function(spectra, method = "fmm",
     }
   )
 
+  nparam <- switch(
+    as.character(prospect_version),
+    `4` = 4,
+    `5` = 5,
+    `5B` = 6,
+    `D` = 7
+  )
+
   waves <- wavelengths(spectra)
 
   model <- function(param) {
@@ -62,7 +71,7 @@ invert_fieldspec <- function(spectra, method = "fmm",
 
   if (test) {
     test_params <- prior$sampler()
-    test_params <- test_params[-length(test_params)]
+    test_params <- test_params[seq_len(nparam)]
     test_model <- model(test_params)
 
     nr_obs <- ifelse(is.null(dim(spectra)), length(spectra), nrow(spectra))

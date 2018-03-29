@@ -6,7 +6,7 @@ context('Inversion using BayesianTools')
 if (Sys.getenv('CI') == 'true') {
     message('Skipping inversion tests on CI system')
 } else {
-    set.seed(12345678)
+    #set.seed(12345678)
     true_prospect <- defparam('prospect_5')
     true_params <- c(true_prospect, residual = 0.01)
     true_model <- prospect(true_prospect, 5)[, 1]
@@ -19,17 +19,23 @@ if (Sys.getenv('CI') == 'true') {
         legend("topright", c('observation', 'pseudo-data'), col = c('black', 'red'), lty = 'solid')
     }
 
-    threshold <- 1.1
+    threshold <- 1.15
+    heteroskedastic <- FALSE
     custom_settings <- list(init = list(iterations = 2000),
                             loop = list(iterations = 1000),
-                            other = list(threshold = threshold,
-                                         verbose_loglike = FALSE))
+                            other = list(
+                              threshold = threshold,
+                              verbose_loglike = FALSE,
+                              min_samp = 2000,
+                              heteroskedastic = heteroskedastic
+                              ))
+    prior <- prospect_bt_prior(5, heteroskedastic = heteroskedastic)
     samples <- invert_fieldspec(observed, prospect_version = 5,
+                                prior = prior,
                                 custom_settings = custom_settings)
 
     samples_mcmc <- BayesianTools::getSample(samples, coda = TRUE)
     samples_burned <- PEcAn.assim.batch::autoburnin(samples_mcmc, method = 'gelman.plot', threshold = threshold)
-
     mean_estimates <- do.call(cbind, summary(samples_burned, quantiles = c(0.01, 0.5, 0.99))[c('statistics', 'quantiles')])
 
     test_that(
