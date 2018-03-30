@@ -62,8 +62,10 @@ invert_fieldspec <- function(spectra,
     `D` = 7
   )
 
-  waves <- wavelengths(spectra)
-  waves <- waves[waves >= 400 & waves <= 2500]
+  all_waves <- wavelengths(spectra)
+  pwaves <- all_waves >= 400 & all_waves <= 2500
+  waves <- waves[pwaves]
+  spectra <- spectra[[waves]]
 
   model <- function(param) {
     spec <- rtm(param)
