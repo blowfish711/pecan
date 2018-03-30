@@ -4,12 +4,16 @@
 \alias{prospect_bt_prior}
 \title{Quick BayesianTools prior creator for PROSPECT model}
 \usage{
-prospect_bt_prior(version, custom_prior = list())
+prospect_bt_prior(version, custom_prior = list(), heteroskedastic = FALSE)
 }
 \arguments{
 \item{version}{PROSPECT version: 4, 5, '5B', or 'D'}
 
 \item{custom_prior}{List containing \code{param_name}, \code{distn}, \code{parama}, \code{paramb}, and \code{lower}}
+
+\item{heteroskedastic}{Logical. If \code{TRUE}, residual SD is a linear function
+of the model output (note that this requires 2 residual parameters). If
+\code{FALSE} (default), it's a constant.}
 }
 \description{
 Quick BayesianTools prior creator for PROSPECT model

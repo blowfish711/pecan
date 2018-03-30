@@ -57,6 +57,8 @@ iterations. If \code{NULL} (default), do not save progress samples.
 If \code{FALSE}, use direct subtraction, which is faster, but may fail if
 elements have different sizes. If \code{NULL} (default), figure this out by
 running \code{model} and comparing to \code{observed}.
+\item \code{heteroskedastic} -- If \code{TRUE}, use heteroskedastic variance in
+likelihood
 }
 }
 

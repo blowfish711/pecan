@@ -24,7 +24,7 @@ spectra <- function(spectra, wavelengths = 400:2500, spectra_types = "R") {
     spectra,
     wavelengths = wavelengths,
     class = c("spectra", "matrix"),
-    spectra_types = spectra_types
+    spectra_types = rep(spectra_types, length.out = ncol(spectra))
   )
 }
 
