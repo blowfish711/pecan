@@ -111,7 +111,7 @@ invert_bt <- function(observed, model, prior, custom_settings = list(), loglike 
 
   if (is.null(sweep)) {
     observed_is_matrix <- !is.null(dim(observed))
-    n_obs <- ifelse(observed_is_matrix, length(observed), nrow(observed))
+    n_obs <- ifelse(observed_is_matrix, nrow(observed), length(observed))
     try_model <- model(prior$sampler()[seq_len(nparams)])
     if (is.null(dim(try_model))) {
       # Model returns a vector. Arithmetic should work.
