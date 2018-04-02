@@ -197,7 +197,7 @@ get.EDR.output <- function(path = getwd()) {
   lai_path <- file.path(path, "LAI.dat")
   albedo <- c(alb.par, alb.nir)
   if (file.exists(lai_path)) {
-    lai <- as.numeric(readLines(lai_path))
+    lai <- scan(lai_path, quiet = TRUE)
     attr(albedo, "LAI") <- lai
   }
   return(albedo)
