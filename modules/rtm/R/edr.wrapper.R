@@ -194,7 +194,12 @@ EDR <- function(img_path,
 get.EDR.output <- function(path = getwd()) {
   alb.par <- as.matrix(read.table(file.path(path, "albedo_par.dat")))[1, ]
   alb.nir <- as.matrix(read.table(file.path(path, "albedo_nir.dat")))[1, ]
+  lai_path <- file.path(path, "LAI.dat")
   albedo <- c(alb.par, alb.nir)
+  if (file.exists(lai_path)) {
+    lai <- as.numeric(readLines(lai_path))
+    attr(albedo, "LAI") <- lai
+  }
   return(albedo)
 }
 
