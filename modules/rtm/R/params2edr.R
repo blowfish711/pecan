@@ -37,7 +37,7 @@ params2edr <- function(params, sep = ".", prospect = TRUE, version = 5) {
     !is.null(names(params)),
     all(grepl(sep, names(params)))
   )
-  params <- params[names(params) != "residual"]
+  params <- params[!names(params) %in% c("residual", "residual_slope", "residual_intercept")]
   split_regex <- paste0("(.*)[", sep, "](.*)")
   pfts <- gsub(split_regex, "\\1", names(params))
   traits <- gsub(split_regex, "\\2", names(params))
