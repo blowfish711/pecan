@@ -32,6 +32,8 @@ For more information about this file see also [Keep a Changelog](http://keepacha
     - New `invert_fieldspec` function that serves as a wrapper around `invert_bt` for more quickly performing PROSPECT inversions on field spectra.
 - PEcAn.ED2:
     - New set of utilities for working with ED meteorology and vegetation inputs, and the ED2IN file. Existing PEcAn code has been revised to use these utilities.
+- PEcAn.data.atmosphere:
+    - New utilities for efficiently downloading NARR time series using THREDDS/OpenDAP
 
 ### Removed
 - Removed deprecated copies of PEcAn.utils::SafeList, PEcAn.utils::listToXml (both moved to PEcAn.settings in v 1.5.2), and PEcAn.utils::fqdn (moved to PEcAn.remote in 1.5.2). This fixes the masses of deprecation warnings in otherwise normal run logs (#1719).
