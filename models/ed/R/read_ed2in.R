@@ -14,7 +14,7 @@ read_ed2in <- function(filename) {
     "NL%([[:graph:]]+)",          # Capture namelist tag (1)
     "[[:blank:]]+=[[:blank:]]*",  # Equals, with optional surrounding whitespace
     "(",                          # Begin value capture (2)
-    "[[:digit:].-]+(,[[:blank:]]*[[:digit:].-]+)*",   # Number, or number list
+    "[[:digit:].-]+(e-?[[:digit:]]+)?(,[[:blank:]]*[[:digit:].-]+(e-?[[:digit:]]+)?)*",   # Number, or number list
     "|",                          # ...or...
     "@.*?@",                      # Old substitution tag (e.g. @MYVALUE@)
     "|",                          # ...or...
@@ -43,7 +43,7 @@ read_ed2in <- function(filename) {
 
   # Convert values that are a list of numbers to a numeric vector
   numlist_values <- grep(
-    "[[:digit:].-]+(,[[:blank:]]*[[:digit:].-]+)+",
+    "[[:digit:].-]+(e-?[[:digit:]]+)?(,[[:blank:]]*[[:digit:].-]+(e-?[[:digit:]]+)?)+",
     values
   )
   values_list[numlist_values] <- lapply(
