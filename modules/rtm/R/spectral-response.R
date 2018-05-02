@@ -26,7 +26,6 @@ spectral.response <- function(spec, sensor) {
     return(spec)
   }
   rsr <- sensor.rsr[[sensor]]
-  m <- spec[rsr[, "index"]] * rsr[, -1]
-  out.spec <- .colSums(m, nrow(m), ncol(m))
-  return(out.spec)
+  ind <- rsr[, 1]
+  spec[ind] %*% rsr[, -1]
 } # spectral.response
