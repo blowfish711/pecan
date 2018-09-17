@@ -1,0 +1,11 @@
+ARG PECAN_VERSION=develop
+
+FROM pecan/executor:${PECAN_VERSION}
+
+COPY Makefile /pecan/
+COPY base /pecan/base/
+COPY modules /pecan/modules/
+COPY models /pecan/models/
+COPY shiny /pecan/shiny/
+
+RUN cd /pecan && make
