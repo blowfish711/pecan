@@ -1,0 +1,29 @@
+FROM pecan/base
+MAINTAINER Alexey Shiklomanov <alexey.shiklomanov@gmail.com>
+
+USER root
+
+# gdebi-core -- Unpacking the .deb file
+# xtail -- For printing log file output to stdout
+RUN apt-get update && apt-get install -y --no-install-recommends \
+	gdebi-core \
+	xtail
+
+RUN wget --no-verbose "https://download3.rstudio.org/ubuntu-14.04/x86_64/VERSION" -O "version.txt" && \
+	VERSION=$(cat version.txt) && \
+	wget --no-verbose "https://download3.rstudio.org/ubuntu-14.04/x86_64/shiny-server-$VERSION-amd64.deb" -O shiny-server-latest.deb && \
+	gdebi -n shiny-server-latest.deb && \
+	. /etc/environment && \
+	Rscript -e "install.packages(c('shiny', 'rmarkdown'), repos = 'https://cran.rstudio.com', lib = '/usr/lib/R/library')"
+
+EXPOSE 3838
+
+COPY shiny-server.sh /usr/bin/shiny-server.sh
+
+CMD ["/usr/bin/shiny-server.sh"]
+
+# variables to store in docker image
+# ENV PECAN_VERSION=${PECAN_VERSION} \
+#     PECAN_GIT_BRANCH=${PECAN_GIT_BRANCH} \
+#     PECAN_GIT_CHECKSUM=${PECAN_GIT_CHECKSUM} \
+#     PECAN_GIT_DATE=${PECAN_GIT_DATE}
