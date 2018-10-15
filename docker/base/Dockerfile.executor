@@ -6,6 +6,12 @@ ARG IMAGE_VERSION="latest"
 FROM pecan/base:${IMAGE_VERSION}
 MAINTAINER Rob Kooper <kooper@illinois.edu>
 
+COPY Makefile /pecan/
+COPY base     /pecan/base/
+COPY modules  /pecan/modules/
+COPY models   /pecan/models/
+RUN cd /pecan && make
+
 # variables to store in docker image
 ENV RABBITMQ_URI=amqp://guest:guest@rabbitmq/%2F \
     RABBITMQ_QUEUE="pecan" \
