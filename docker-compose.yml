@@ -85,13 +85,18 @@ services:
 
   # PEcAn web front end, this is just the PHP code
   web:
-    image: pecan/web:${PECAN:-latest}
+    image: pecan/web:local
+    build:
+      context: .
+      dockerfile: docker/base/Dockerfile.web
+    # image: pecan/web:${PECAN:-latest}
     networks:
       - pecan
     # ports:
     #   - 8005:80
     volumes:
       - pecan:/data
+      - ./web:/var/www/html/pecan
       - pecan:/var/www/html/pecan/data
     depends_on:
        - postgres
@@ -104,7 +109,14 @@ services:
 
   # PEcAn executor, executes jobs launched from web
   executor:
-    image: pecan/executor:${PECAN:-latest}
+    # image: pecan/executor:${PECAN:-latest}
+    image: pecan/executor:local
+    build:
+      context: .
+      dockerfile: docker/base/Dockerfile.executor
+      cache_from:
+        # - pecan/base:local
+        - pecan/executor:local
     networks:
       - pecan
     hostname: docker
@@ -117,7 +129,11 @@ services:
 
   # PEcAn sipnet model runner
   sipnet:
-    image: pecan/model-sipnet-136
+    # image: pecan/model-sipnet-136
+    image: pecan/model-sipnet-136:local
+    build:
+      context: .
+      dockerfile: docker/models/Dockerfile.sipnet
     networks:
       - pecan
     volumes:
@@ -128,7 +144,11 @@ services:
 
   # PEcAn sipnet model runner
   ed2:
-    image: pecan/model-ed2-git
+    # image: pecan/model-ed2-git
+    image: pecan/model-ed2-git:local
+    build:
+      context: .
+      dockerfile: docker/models/Dockerfile.ed2
     networks:
       - pecan
     volumes:

@@ -30,7 +30,7 @@ RUN git clone https://github.com/EDmodel/ED2.git \
 # ----------------------------------------------------------------------
 # BUILD PECAN FOR MODEL
 # ----------------------------------------------------------------------
-FROM pecan/executor:latest
+FROM pecan/executor:local
 
 # ----------------------------------------------------------------------
 # INSTALL MODEL SPECIFIC PIECES
