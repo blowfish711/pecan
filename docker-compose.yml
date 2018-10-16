@@ -77,6 +77,8 @@ services:
       - RAILS_RELATIVE_URL_ROOT=/bety
     depends_on:
       - postgres
+    volumes:
+      - ../bety:/home/bety
     labels:
       - "traefik.enable=true"
       - "traefik.frontend.rule=PathPrefix:/bety/"
