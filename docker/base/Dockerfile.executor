@@ -1,16 +1,11 @@
-ARG IMAGE_VERSION="latest"
+# ARG IMAGE_VERSION="latest"
 
 # ----------------------------------------------------------------------
 # PECAN FOR MODEL BASE IMAGE
 # ----------------------------------------------------------------------
-FROM pecan/base:${IMAGE_VERSION}
+# FROM pecan/base:${IMAGE_VERSION}
+FROM pecan/executor:local
 MAINTAINER Rob Kooper <kooper@illinois.edu>
-
-COPY Makefile /pecan/
-COPY base     /pecan/base/
-COPY modules  /pecan/modules/
-COPY models   /pecan/models/
-RUN cd /pecan && make
 
 # variables to store in docker image
 ENV RABBITMQ_URI=amqp://guest:guest@rabbitmq/%2F \
@@ -24,6 +19,12 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends python3-pip \
     && pip3 install pika \
     && rm -rf /var/lib/apt/lists/*
+
+COPY Makefile /pecan/
+COPY base     /pecan/base/
+COPY modules  /pecan/modules/
+COPY models   /pecan/models/
+RUN cd /pecan && make
 
 WORKDIR /work
 COPY docker/receiver.py docker/sender.py /work/
