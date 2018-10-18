@@ -27,7 +27,7 @@ RUN curl -o sipnet_r${MODEL_VERSION}.tar.gz http://isda.ncsa.illinois.edu/~koope
 # ----------------------------------------------------------------------
 # BUILD PECAN FOR SIPNET
 # ----------------------------------------------------------------------
-FROM pecan/executor:latest
+FROM pecan/executor:local
 
 # ----------------------------------------------------------------------
 # INSTALL SIPNET SPECIFIC PIECES
