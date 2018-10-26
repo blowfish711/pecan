@@ -307,8 +307,14 @@ write.config.ED2 <- function(trait.values, settings, run.id, defaults = settings
   )
   
   ##---------------------------------------------------------------------
-  # Modify any additional tags provided in settings$model$ed2in_tags
-  ed2in.text <- modify_ed2in(ed2in.text, .dots = settings$model$ed2in_tags, add_if_missing = TRUE, check_paths = check)
+  # Modify any additional tags provided in settings$model$ed2in_tags.
+  # By default, all tags are parsed as text, including numeric ones,
+  # so here we try to convert numeric tags to numbers.
+  custom_tags <- settings$model$ed2in_tags
+  custom_num_tags <- suppressWarnings(lapply(custom_tags, as.numeric))
+  custom_num_tags <- Filter(is.finite, custom_num_tags)
+  custom_tags <- modifyList(custom_tags, custom_num_tags)
+  ed2in.text <- modify_ed2in(ed2in.text, .dots = custom_tags, add_if_missing = TRUE, check_paths = check)
   
   ##----------------------------------------------------------------------
   if (check) {
