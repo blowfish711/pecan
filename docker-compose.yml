@@ -242,6 +242,17 @@ services:
     volumes:
       - pecan:/data
 
+  # Development version
+  ed2devel:
+    image: pecan/model-ed2-develop:latest
+    networks:
+      - pecan
+    depends_on:
+       - rabbitmq
+    volumes:
+      - pecan:/data
+    restart: unless-stopped
+
 # ----------------------------------------------------------------------
 # Name of network to be used by all containers
 # ----------------------------------------------------------------------
