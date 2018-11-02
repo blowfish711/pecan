@@ -17,7 +17,8 @@ ENV RABBITMQ_URI=amqp://guest:guest@rabbitmq/%2F \
 # ----------------------------------------------------------------------
 RUN apt-get update \
     && apt-get install -y --no-install-recommends python3-pip \
-    && pip3 install pika \
+    && pip3 install setuptools \
+    && pip3 install pika dicttoxml \
     && rm -rf /var/lib/apt/lists/*
 
 COPY Makefile /pecan/
@@ -25,6 +26,8 @@ COPY base     /pecan/base/
 COPY modules  /pecan/modules/
 COPY models   /pecan/models/
 RUN cd /pecan && make
+
+COPY web/workflow.R /pecan/workflow.R
 
 WORKDIR /work
 COPY docker/receiver.py docker/sender.py /work/

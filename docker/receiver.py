@@ -4,8 +4,12 @@ import os
 import subprocess
 import traceback
 
-import pika
+import dicttoxml
+import collections
+import os
+import shutil
 
+import pika
 
 rabbitmq_uri   = os.getenv('RABBITMQ_URI',   'amqp://guest:guest@rabbitmq/%2F')
 rabbitmq_queue = os.getenv('RABBITMQ_QUEUE', 'pecan')
@@ -15,7 +19,26 @@ default_application = os.getenv('APPLICATION', 'job.sh')
 # called for every message, this will start the program and ack message if all is ok.
 def callback(ch, method, properties, body):
     logging.info(body)
-    jbody = json.loads(body)
+    jbody = json.loads(body, object_pairs_hook=collections.OrderedDict)
+
+    folder = jbody.get('folder')
+
+    pecan_json = jbody.get('pecan_json')
+    if pecan_json is not None:
+        # Passed pecan XML as JSON body of message
+        logging.info("Detected custom XML.")
+        outdir = pecan_json['outdir']
+        os.mkdir(outdir)
+        workflow_path = os.path.join(outdir, "workflow.R")
+        shutil.copyfile("/pecan/workflow.R", workflow_path)
+        xml = dicttoxml.dicttoxml(pecan_json, custom_root='pecan', attr_type=False)
+        xml_file = open(os.path.join(outdir, "pecan.xml"), "w")
+        xml_file.write(xml.decode('utf-8'))
+        xml_file.close()
+
+        # Set variables for execution
+        application = "R CMD BATCH workflow.R"
+        folder = outdir
 
     custom_application = jbody.get('custom_application')
 
@@ -26,9 +49,9 @@ def callback(ch, method, properties, body):
         application = default_application
 
     logging.info("Running command: %s" % application)
-    logging.info("Starting command in directory %s." % jbody['folder'])
+    logging.info("Starting command in directory %s." % folder)
     try:
-        output = subprocess.check_output(application, stderr=subprocess.STDOUT, shell=True, cwd=jbody['folder'])
+        output = subprocess.check_output(application, stderr=subprocess.STDOUT, shell=True, cwd=folder)
         status = 'OK'
         logging.info("Finished running job.")
     except subprocess.CalledProcessError as e:
