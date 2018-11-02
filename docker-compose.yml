@@ -258,6 +258,9 @@ services:
 # ----------------------------------------------------------------------
 networks:
   pecan:
+    ipam:
+      config:
+        - subnet: 10.17.1.0/24
 
 # ----------------------------------------------------------------------
 # Volumes used by the PEcAn stack. These volumes are used to make sure
