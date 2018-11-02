@@ -24,6 +24,7 @@ export GFORTRAN_UNBUFFERED_PRECONNECTED=yes
 if [ ! -e "@OUTDIR@/history.xml" ]; then
   cd "@RUNDIR@"
   
+  ulimit -s unlimited
   "@BINARY@" -s
   STATUS=$?
   if [ $STATUS == 0 ]; then
