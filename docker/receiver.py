@@ -56,15 +56,15 @@ def callback(ch, method, properties, body):
         status = 'OK'
         logging.info("Finished running job.")
     except subprocess.CalledProcessError as e:
-        logging.exception("Error running job.", e)
+        logging.exception("Error running job: CalledProcessError -- ", e)
         output = e.output
         status = 'ERROR'
     except Exception as e:
-        logging.exception("Error running job.", e)
+        logging.exception("Error running job: Other exception -- ", e)
         output = str(e)
         status = 'ERROR'
     finally:
-        ch.basic_ack(delivery_tag=method.delivery_tag)
+        logging.info("Message processing complete. Check above for possible errors.")
 
     try:
         with open(os.path.join(folder, 'rabbitmq.out'), 'w') as out:
@@ -84,7 +84,7 @@ def start_rabbitmq():
 
     # receive 1 message at a time, call callback function
     channel.basic_qos(prefetch_count=1)
-    channel.basic_consume(callback, queue=rabbitmq_queue)
+    channel.basic_consume(callback, queue=rabbitmq_queue, no_ack=True)
 
     # receive messages
     try:
