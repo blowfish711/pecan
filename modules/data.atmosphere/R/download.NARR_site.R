@@ -312,7 +312,7 @@ generate_narr_url <- function(dates, flx) {
   tag <- if (flx) "flx" else "sfc"
   base_url <- paste(
     # Have to login, so use Alexey Shiklomanov's account
-    "http://ashiklom%40bu.edu:Thisis4theNARR@rda.ucar.edu",
+    "https://ashiklom%40bu.edu:Thisis4theNARR@rda.ucar.edu",
     "thredds", "dodsC", "files", "g", "ds608.0", "3HRLY",
     sep = "/"
   )
