@@ -314,6 +314,12 @@ write.config.ED2 <- function(trait.values, settings, run.id, defaults = settings
   
 
   thsum <- settings$run$inputs$thsum$path
+  if (is.null(thsum)) {
+    PEcAn.logger::logger.severe(
+      "No `thsum` path (<run/inputs/thsum/path>) provided, ",
+      "but it is required by ED2."
+    )
+  }
   if (!grepl("/$", thsum)) {
     thsum <- paste0(thsum, "/")
   }
