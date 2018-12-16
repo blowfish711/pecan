@@ -1,0 +1,9 @@
+FROM 
+
+COPY api /pecanapi
+
+RUN Rscript -e 'install.packages("plumber")' &&
+    Rscript -e 'devtools::install("/pecanapi")'
+
+WORKDIR /pecanapi/inst
+CMD Rscript -e 'plumber::plumb("plumber.R")$run(port=8000)'

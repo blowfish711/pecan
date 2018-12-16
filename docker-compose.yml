@@ -254,6 +254,13 @@ services:
     volumes:
       - pecan:/data
 
+  api:
+    image: pecan/api:${PECAN_VERSION:-latest}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.frontend.rule=${TRAEFIK_FRONTEND_RULE:-}PathPrefix:/api/"
+      - "traefik.backend=api"
+
   # ----------------------------------------------------------------------
   # PEcAn models, list each model you want to run below
   # ----------------------------------------------------------------------
