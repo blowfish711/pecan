@@ -201,9 +201,21 @@ write.config.ED2 <- function(trait.values, settings, run.id, defaults = settings
   ed2in.text <- proc_met_startend(settings[[c("run", "site", "met.end")]], "METCYCF")
 
   if (is.null(settings$model$phenol.scheme)) {
-    PEcAn.logger::logger.error(paste0("no phenology scheme set; \n",
-                                     "need to add <phenol.scheme> ",
-                                     "tag under <model> tag in settings file"))
+    PEcAn.logger::logger.warn(
+      "No phenology scheme set (tag <model/phenol.scheme>). ",
+      "Using ED default phenology (IPHEN_SCHEME = 0)."
+    )
+    ed2in.text <- modify_ed2in(
+      ed2in.text,
+      IPHEN_SCHEME = 0,
+      IPHENYS1 = 0,
+      PIPHENYSF = 0,
+      IPHENYF1 = 0,
+      IPHENYFF = 0,
+      PHENPATH = "ignore",
+      add_if_missing = TRUE,
+      check_paths = check
+    )
   } else if (settings$model$phenol.scheme == 1) {
     ## Set prescribed phenology switch in ED2IN
     ed2in.text <- modify_ed2in(
