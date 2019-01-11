@@ -255,11 +255,15 @@ services:
       - pecan:/data
 
   api:
-    image: pecan/api:${PECAN_VERSION:-latest}
+    image: trestletech/plumber:latest
+    #image: pecan/api:${PECAN_VERSION:-latest}
     labels:
       - "traefik.enable=true"
+      #- "traefik.port=8000"
       - "traefik.frontend.rule=${TRAEFIK_FRONTEND_RULE:-}PathPrefix:/api/"
       - "traefik.backend=api"
+    networks:
+      - pecan
 
   # ----------------------------------------------------------------------
   # PEcAn models, list each model you want to run below

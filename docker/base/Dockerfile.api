@@ -1,9 +1,10 @@
-FROM 
+FROM pecan/executor:local
 
-COPY api /pecanapi
+#COPY api /pecanapi
+RUN mkdir -p /pecanapi/inst
 
-RUN Rscript -e 'install.packages("plumber")' &&
-    Rscript -e 'devtools::install("/pecanapi")'
+# RUN Rscript -e 'install.packages("plumber")' &&\
+#     Rscript -e 'devtools::install("/pecanapi")'
 
 WORKDIR /pecanapi/inst
-CMD Rscript -e 'plumber::plumb("plumber.R")$run(port=8000)'
+CMD R -e 'pr <- plumber::plumb("plumber.R"); pr$run(host = "0.0.0.0", port=8000)'
