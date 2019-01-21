@@ -38,7 +38,9 @@ read_ed2in <- function(filename) {
 
   numeric_values <- !is.na(suppressWarnings(as.numeric(values))) |
     grepl("^@.*?@$", values)    # Unquoted old substitutions are numeric
-  values_list[numeric_values] <- lapply(values_list[numeric_values], as.numeric)
+  values_list[numeric_values] <- suppressWarnings(
+    lapply(values_list[numeric_values], as.numeric)
+  )
   # NOTE: This should throw a warning if any old substitution tags are present
 
   # Convert values that are a list of numbers to a numeric vector
