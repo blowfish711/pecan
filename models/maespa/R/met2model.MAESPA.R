@@ -17,7 +17,8 @@
 ##'
 ##' @title met2model.MAESPA
 ##' @export
-##' @param in.path location on disk where inputs are stored
+##' @param in.path location on disk where inputs are stored. Note that
+##'   this can also be the URL prefix for a THREDDS/OpenDAP connection.
 ##' @param in.prefix prefix of input and output files
 ##' @param outfolder location on disk where outputs will be stored
 ##' @param start_date the start date of the data to be downloaded (will only use the year part of the date)
@@ -74,60 +75,64 @@ met2model.MAESPA <- function(in.path, in.prefix, outfolder, start_date, end_date
 
     old.file <- file.path(in.path, paste(in.prefix, year, "nc", sep = "."))
 
-    if (file.exists(old.file)) {
-      ## open netcdf
-      nc <- ncdf4::nc_open(old.file)
-      ## convert time to seconds
-      sec <- nc$dim$time$vals
-      sec <- udunits2::ud.convert(sec, unlist(strsplit(nc$dim$time$units, " "))[1], "seconds")
+    nc <- tryCatch(ncdf4::nc_open(old.file), error = function(e) {
+      PEcAn.logger::logger.warn(paste0(
+        "Unable to open input met file: `", old.file,
+        "`. Skipping to next year."
+      ))
+      FALSE
+    })
 
-      dt <- PEcAn.utils::seconds_in_year(year) / length(sec)
-      tstep <- round(86400 / dt)
-      dt <- 86400 / tstep
+    if (isFALSE(nc)) next
 
-      # Check which variables are available and which are not
+    nc <- ncdf4::nc_open(old.file)
+    ## convert time to seconds
+    sec <- nc$dim$time$vals
+    sec <- udunits2::ud.convert(sec, unlist(strsplit(nc$dim$time$units, " "))[1], "seconds")
 
-      ## extract variables
-      lat   <- ncdf4::ncvar_get(nc, "latitude")
-      lon   <- ncdf4::ncvar_get(nc, "longitude")
-      RAD   <- ncdf4::ncvar_get(nc, "surface_downwelling_shortwave_flux_in_air")  #W m-2
-      PAR   <- try(ncdf4::ncvar_get(nc, "surface_downwelling_photosynthetic_photon_flux_in_air"))  #mol m-2 s-1
-      TAIR  <- ncdf4::ncvar_get(nc, "air_temperature")  # K
-      QAIR  <- ncdf4::ncvar_get(nc, "specific_humidity")  # 1
-      PPT   <- ncdf4::ncvar_get(nc, "precipitation_flux")  #kg m-2 s-1
-      CA    <- try(ncdf4::ncvar_get(nc, "mole_fraction_of_carbon_dioxide_in_air"))  #mol/mol
-      PRESS <- ncdf4::ncvar_get(nc, "air_pressure")  # Pa
-      
-      ## Convert specific humidity to fractional relative humidity
-      RH <- PEcAn.data.atmosphere::qair2rh(QAIR, TAIR, PRESS)
-      
-      ## Process PAR
-      if (!is.numeric(PAR)) {
-        # Function from data.atmosphere will convert SW to par in W/m2
-        PAR <- PEcAn.data.atmosphere::sw2par(RAD)
-      } else {
-        # convert
-        PAR <- udunits2::ud.convert(PAR, "mol", "umol")
-      }
+    dt <- PEcAn.utils::seconds_in_year(year) / length(sec)
+    tstep <- round(86400 / dt)
+    dt <- 86400 / tstep
 
-      # Convert air temperature to Celsius
-      TAIR <- udunits2::ud.convert(TAIR, "kelvin", "celsius")
+    # Check which variables are available and which are not
 
-      #### ppm. atmospheric CO2 concentration.
-      ### Constant from Environ namelist used instead if CA is nonexistent
-      defaultCO2 <- 400
-      if (!is.numeric(CA)) {
-        print("Atmospheric CO2 concentration will be set to constant value set in ENVIRON namelist ")
-        rm(CA)
-      } else {
-        CA <- CA * 1e+06
-      }
-
-      ncdf4::nc_close(nc)
+    ## extract variables
+    lat   <- ncdf4::ncvar_get(nc, "latitude")
+    lon   <- ncdf4::ncvar_get(nc, "longitude")
+    RAD   <- ncdf4::ncvar_get(nc, "surface_downwelling_shortwave_flux_in_air")  #W m-2
+    PAR   <- try(ncdf4::ncvar_get(nc, "surface_downwelling_photosynthetic_photon_flux_in_air"))  #mol m-2 s-1
+    TAIR  <- ncdf4::ncvar_get(nc, "air_temperature")  # K
+    QAIR  <- ncdf4::ncvar_get(nc, "specific_humidity")  # 1
+    PPT   <- ncdf4::ncvar_get(nc, "precipitation_flux")  #kg m-2 s-1
+    CA    <- try(ncdf4::ncvar_get(nc, "mole_fraction_of_carbon_dioxide_in_air"))  #mol/mol
+    PRESS <- ncdf4::ncvar_get(nc, "air_pressure")  # Pa
+    
+    ## Convert specific humidity to fractional relative humidity
+    RH <- PEcAn.data.atmosphere::qair2rh(QAIR, TAIR, PRESS)
+    
+    ## Process PAR
+    if (!is.numeric(PAR)) {
+      # Function from data.atmosphere will convert SW to par in W/m2
+      PAR <- PEcAn.data.atmosphere::sw2par(RAD)
     } else {
-      print("Skipping to next year")
-      next
+      # convert
+      PAR <- udunits2::ud.convert(PAR, "mol", "umol")
     }
+
+    # Convert air temperature to Celsius
+    TAIR <- udunits2::ud.convert(TAIR, "kelvin", "celsius")
+
+    #### ppm. atmospheric CO2 concentration.
+    ### Constant from Environ namelist used instead if CA is nonexistent
+    defaultCO2 <- 400
+    if (!is.numeric(CA)) {
+      print("Atmospheric CO2 concentration will be set to constant value set in ENVIRON namelist ")
+      rm(CA)
+    } else {
+      CA <- CA * 1e+06
+    }
+
+    ncdf4::nc_close(nc)
 
     if (exists("CA")) {
       tmp <- cbind(TAIR, PPT, RAD, PRESS, PAR, RH, CA)
