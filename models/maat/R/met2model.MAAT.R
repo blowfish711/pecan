@@ -83,7 +83,7 @@ met2model.MAAT <- function(in.path, in.prefix, outfolder, start_date, end_date,
 
     PEcAn.logger::logger.info(paste0("Processing year: ", year))
     ncdf.file <- file.path(in.path, paste(in.prefix, year, "nc", sep = "."))
-    nc <- tryCatch(ncdf4::nc_open(ncdf4.file), error = function(e) {
+    nc <- tryCatch(ncdf4::nc_open(ncdf.file), error = function(e) {
       PEcAn.logger::logger.warn(paste0(
         "Unable to open file `", ncdf.file, "`. Continuing to next year."
       ))
@@ -193,35 +193,26 @@ met2model.MAAT <- function(in.path, in.prefix, outfolder, start_date, end_date,
 
     # output matrix
     n <- length(Tair)
+    tmp <- cbind.data.frame(
+      Time = time[1:n],
+      Year = yr[1:n],
+      DOY = doy[1:n],
+      Hour = hr[1:n],
+      Frac_day = frac.day[1:n],
+      Timestep_frac = rep(dt / day_secs, n),
+      CO2 = rep(NA_real_, n),
+      Tair_degC = Tair_C,
+      Prec_mm = Rain * dt,  # converts from mm/s to mm umols/m2/s
+      Atm_press_Pa = Atm_press,
+      RH_perc = RH_perc,
+      VPD_kPa = VPD_kPa,
+      PAR_umols_m2_s = PAR,
+      Windspeed_m_s = ws
+    )
     if (useCO2) {
-      tmp <- cbind.data.frame(Time = time[1:n],
-                              Year = yr[1:n],
-                              DOY = doy[1:n],
-                              Hour = hr[1:n],
-                              Frac_day = frac.day[1:n],
-                              Timestep_frac = rep(dt/day_secs, n),
-                              CO2 = CO2,
-                              Tair_degC = Tair_C,
-                              Prec_mm = Rain * dt,  # converts from mm/s to mm umols/m2/s
-                              Atm_press_Pa = Atm_press,
-                              RH_perc = RH_perc,
-                              VPD_kPa = VPD_kPa,
-                              PAR_umols_m2_s = PAR,
-                              Windspeed_m_s = ws)
+      tmp[["CO2"]] <- CO2
     } else {
-      tmp <- cbind.data.frame(Time = time[1:n],
-                              Year = yr[1:n],
-                              DOY = doy[1:n],
-                              Hour = hr[1:n],
-                              Frac_day = frac.day[1:n],
-                              Timestep_frac = rep(dt/day_secs, n),
-                              Tair_degC = Tair_C,
-                              Prec_mm = Rain * dt,  # converts from mm/s to mm umols/m2/s
-                              Atm_press_Pa = Atm_press,
-                              RH_perc = RH_perc,
-                              VPD_kPa = VPD_kPa,
-                              PAR_umols_m2_s = PAR,
-                              Windspeed_m_s = ws)
+      tmp[["CO2"]] <- NULL
     }
 
     ## quick error check, sometimes get a NA in the last hr ?? NEEDED?
