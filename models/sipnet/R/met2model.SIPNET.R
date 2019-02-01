@@ -17,7 +17,8 @@
 ##'
 ##' @title met2model.SIPNET
 ##' @export
-##' @param in.path location on disk where inputs are stored
+##' @param in.path location on disk where inputs are stored. Note that
+##'   this can also be the URL prefix for a THREDDS/OpenDAP connection.
 ##' @param in.prefix prefix of input and output files OR the full file name if year.fragment = TRUE
 ##' @param outfolder location on disk where outputs will be stored
 ##' @param start_date the start date of the data to be downloaded (will only use the year part of the date)
@@ -108,80 +109,84 @@ met2model.SIPNET <- function(in.path, in.prefix, outfolder, start_date, end_date
     } else { # Use the supplied file name
       old.file <- file.path(in.path, in.prefix)
     }
+
+    nc <- tryCatch(ncdf4::nc_open(old.file), error = function(e) {
+      PEcAn.logger::logger.warn(paste0(
+        "Unable to open input met file `", old.file, "`. ",
+        "Skipping to next year."
+      ))
+      FALSE
+    })
+
+    if (isFALSE(nc)) next
     
-    if (file.exists(old.file)) {
-      ## open netcdf
-      nc <- ncdf4::nc_open(old.file)
+    nc <- ncdf4::nc_open(old.file)
+    
+    ## convert time to seconds
+    sec <- nc$dim$time$vals
+    sec <- udunits2::ud.convert(sec, unlist(strsplit(nc$dim$time$units, " "))[1], "seconds")
+    
+    # Calculate the delta time.  If using whole-year data, the appropriate length in seconds is 
+    # fetched; otherwise, it is assumed that the length of time provided in the time dimension of
+    # the input file is correct.
+    if (year.fragment) {
+      dt <- mean(diff(sec), na.rm=TRUE)
       
-      ## convert time to seconds
-      sec <- nc$dim$time$vals
-      sec <- udunits2::ud.convert(sec, unlist(strsplit(nc$dim$time$units, " "))[1], "seconds")
-      
-      # Calculate the delta time.  If using whole-year data, the appropriate length in seconds is 
-      # fetched; otherwise, it is assumed that the length of time provided in the time dimension of
-      # the input file is correct.
-      if (year.fragment) {
-        dt <- mean(diff(sec), na.rm=TRUE)
-        
-      } else {
-        dt <- PEcAn.utils::seconds_in_year(year) / length(sec)
-      }
-      tstep <- round(86400 / dt)
-      dt <- 86400 / tstep
-      
-      ## extract variables
-      lat <- ncdf4::ncvar_get(nc, "latitude")
-      lon <- ncdf4::ncvar_get(nc, "longitude")
-      Tair <-ncdf4::ncvar_get(nc, "air_temperature")  ## in Kelvin
-      Tair_C <- udunits2::ud.convert(Tair, "K", "degC")
-      Qair <-ncdf4::ncvar_get(nc, "specific_humidity")  #humidity (kg/kg)
-      ws <- try(ncdf4::ncvar_get(nc, "wind_speed"))
-      if (!is.numeric(ws)) {
-        U <- ncdf4::ncvar_get(nc, "eastward_wind")
-        V <- ncdf4::ncvar_get(nc, "northward_wind")
-        ws <- sqrt(U ^ 2 + V ^ 2)
-        PEcAn.logger::logger.info("wind_speed absent; calculated from eastward_wind and northward_wind")
-      }
-      
-      Rain <- ncdf4::ncvar_get(nc, "precipitation_flux")
-      # pres <- ncdf4::ncvar_get(nc,'air_pressure') ## in pascal
-      SW <- ncdf4::ncvar_get(nc, "surface_downwelling_shortwave_flux_in_air")  ## in W/m2
-      
-      PAR <- try(ncdf4::ncvar_get(nc, "surface_downwelling_photosynthetic_photon_flux_in_air"))  ## in mol/m2/s
-      if (!is.numeric(PAR)) {
-        PAR <- SW * 0.45
-        PEcAn.logger::logger.info("surface_downwelling_photosynthetic_photon_flux_in_air absent; PAR set to SW * 0.45")
-      }
-      
-      soilT <- try(ncdf4::ncvar_get(nc, "soil_temperature"))
-      if (!is.numeric(soilT)) {
-        # approximation borrowed from SIPNET CRUNCEP preprocessing's tsoil.py
-        tau <- 15 * tstep
-        filt <- exp(-(1:length(Tair)) / tau)
-        filt <- (filt / sum(filt))
-        soilT <- convolve(Tair, filt)
-        soilT <- udunits2::ud.convert(soilT, "K", "degC")
-        PEcAn.logger::logger.info("soil_temperature absent; soilT approximated from Tair")
-      } else {
-        soilT <- udunits2::ud.convert(soilT, "K", "degC")
-      }
-      
-      SVP <- udunits2::ud.convert(PEcAn.data.atmosphere::get.es(Tair_C), "millibar", "Pa")  ## Saturation vapor pressure
-      VPD <- try(ncdf4::ncvar_get(nc, "water_vapor_saturation_deficit"))  ## in Pa
-      if (!is.numeric(VPD)) {
-        VPD <- SVP * (1 - PEcAn.data.atmosphere::qair2rh(Qair, Tair_C))
-        PEcAn.logger::logger.info("water_vapor_saturation_deficit absent; VPD calculated from Qair, Tair, and SVP (saturation vapor pressure) ")
-      }
-      e_a <- SVP - VPD
-      VPDsoil <- udunits2::ud.convert(PEcAn.data.atmosphere::get.es(soilT), "millibar", "Pa") *
-        (1 - PEcAn.data.atmosphere::qair2rh(Qair, soilT))
-      
-      ncdf4::nc_close(nc)
     } else {
-      PEcAn.logger::logger.info("Skipping to next year")
-      next
+      dt <- PEcAn.utils::seconds_in_year(year) / length(sec)
+    }
+    tstep <- round(86400 / dt)
+    dt <- 86400 / tstep
+    
+    ## extract variables
+    lat <- ncdf4::ncvar_get(nc, "latitude")
+    lon <- ncdf4::ncvar_get(nc, "longitude")
+    Tair <-ncdf4::ncvar_get(nc, "air_temperature")  ## in Kelvin
+    Tair_C <- udunits2::ud.convert(Tair, "K", "degC")
+    Qair <-ncdf4::ncvar_get(nc, "specific_humidity")  #humidity (kg/kg)
+    ws <- try(ncdf4::ncvar_get(nc, "wind_speed"))
+    if (!is.numeric(ws)) {
+      U <- ncdf4::ncvar_get(nc, "eastward_wind")
+      V <- ncdf4::ncvar_get(nc, "northward_wind")
+      ws <- sqrt(U ^ 2 + V ^ 2)
+      PEcAn.logger::logger.info("wind_speed absent; calculated from eastward_wind and northward_wind")
     }
     
+    Rain <- ncdf4::ncvar_get(nc, "precipitation_flux")
+    # pres <- ncdf4::ncvar_get(nc,'air_pressure') ## in pascal
+    SW <- ncdf4::ncvar_get(nc, "surface_downwelling_shortwave_flux_in_air")  ## in W/m2
+    
+    PAR <- try(ncdf4::ncvar_get(nc, "surface_downwelling_photosynthetic_photon_flux_in_air"))  ## in mol/m2/s
+    if (!is.numeric(PAR)) {
+      PAR <- SW * 0.45
+      PEcAn.logger::logger.info("surface_downwelling_photosynthetic_photon_flux_in_air absent; PAR set to SW * 0.45")
+    }
+    
+    soilT <- try(ncdf4::ncvar_get(nc, "soil_temperature"))
+    if (!is.numeric(soilT)) {
+      # approximation borrowed from SIPNET CRUNCEP preprocessing's tsoil.py
+      tau <- 15 * tstep
+      filt <- exp(-(1:length(Tair)) / tau)
+      filt <- (filt / sum(filt))
+      soilT <- convolve(Tair, filt)
+      soilT <- udunits2::ud.convert(soilT, "K", "degC")
+      PEcAn.logger::logger.info("soil_temperature absent; soilT approximated from Tair")
+    } else {
+      soilT <- udunits2::ud.convert(soilT, "K", "degC")
+    }
+    
+    SVP <- udunits2::ud.convert(PEcAn.data.atmosphere::get.es(Tair_C), "millibar", "Pa")  ## Saturation vapor pressure
+    VPD <- try(ncdf4::ncvar_get(nc, "water_vapor_saturation_deficit"))  ## in Pa
+    if (!is.numeric(VPD)) {
+      VPD <- SVP * (1 - PEcAn.data.atmosphere::qair2rh(Qair, Tair_C))
+      PEcAn.logger::logger.info("water_vapor_saturation_deficit absent; VPD calculated from Qair, Tair, and SVP (saturation vapor pressure) ")
+    }
+    e_a <- SVP - VPD
+    VPDsoil <- udunits2::ud.convert(PEcAn.data.atmosphere::get.es(soilT), "millibar", "Pa") *
+      (1 - PEcAn.data.atmosphere::qair2rh(Qair, soilT))
+    
+    ncdf4::nc_close(nc)
+   
     ## build time variables (year, month, day of year)
     nyr <- floor(length(sec) / 86400 / 365 * dt)
     yr <- NULL
