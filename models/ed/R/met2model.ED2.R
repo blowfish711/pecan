@@ -15,7 +15,8 @@
 #' below to TRUE.
 #'
 #' @export
-#' @param in.path location on disk where inputs are stored
+#' @param in.path location on disk where inputs are stored. Note that
+#'   this can also be the URL prefix for a THREDDS/OpenDAP connection.
 #' @param in.prefix prefix of input and output files
 #' @param outfolder location on disk where outputs will be stored
 #' @param start_date the start date of the data to be downloaded (will only use the year part of the date)
@@ -74,16 +75,14 @@ met2model.ED2 <- function(in.path, in.prefix, outfolder, start_date, end_date, l
   ## loop over files
   for (year in start_year:end_year) {
     ncfile <- file.path(in.path, paste(in.prefix, year, "nc", sep = "."))
-    if (!file.exists(ncfile)) {
-      PEcAn.logger::logger.severe(
-        "Input file ", ncfile, "(year ", year, ") ", "not found."
-      )
-    }
-
-    ## extract file root name froot <- substr(files[i],1,28) print(c(i,froot))
-
-    ## open netcdf
-    nc <- ncdf4::nc_open(ncfile)
+    nc <- tryCatch(
+      ncdf4::nc_open(ncfile),
+      error = function(e) {
+        PEcAn.logger::logger.severe(
+          "Unable to open requested input file: ", ncfile
+        )
+      }
+    )
 
     # check lat/lon
     flat <- try(ncdf4::ncvar_get(nc, "latitude"), silent = TRUE)

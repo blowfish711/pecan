@@ -9,7 +9,8 @@ met2model.ED2(in.path, in.prefix, outfolder, start_date, end_date,
   verbose = FALSE, leap_year = TRUE, ...)
 }
 \arguments{
-\item{in.path}{location on disk where inputs are stored}
+\item{in.path}{location on disk where inputs are stored. Note that
+this can also be the URL prefix for a THREDDS/OpenDAP connection.}
 
 \item{in.prefix}{prefix of input and output files}
 
