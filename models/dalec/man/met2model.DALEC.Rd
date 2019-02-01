@@ -9,7 +9,8 @@ met2model.DALEC(in.path, in.prefix, outfolder, start_date, end_date,
   spin_nsample = NULL, spin_resample = NULL, ...)
 }
 \arguments{
-\item{in.path}{location on disk where inputs are stored}
+\item{in.path}{location on disk where inputs are stored. Note that
+this can also be the URL prefix for a THREDDS/OpenDAP connection.}
 
 \item{in.prefix}{prefix of input and output files}
 
@@ -22,6 +23,8 @@ met2model.DALEC(in.path, in.prefix, outfolder, start_date, end_date,
 \item{overwrite}{should existing files be overwritten}
 
 \item{verbose}{should the function be very verbose}
+
+\item{in.path}{location on disk where inputs are stored}
 }
 \description{
 met2model for DALEC

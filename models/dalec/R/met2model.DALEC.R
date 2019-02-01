@@ -17,6 +17,8 @@
 ##'
 ##' @title met2model.DALEC
 ##' @export
+##' @param in.path location on disk where inputs are stored. Note that
+##'   this can also be the URL prefix for a THREDDS/OpenDAP connection.
 ##' @param in.path location on disk where inputs are stored
 ##' @param in.prefix prefix of input and output files
 ##' @param outfolder location on disk where outputs will be stored
@@ -97,9 +99,14 @@ met2model.DALEC <- function(in.path, in.prefix, outfolder, start_date, end_date,
     LeafWaterPot <- -0.8
 
     old.file <- file.path(in.path, paste(in.prefix, year, ".nc", sep = ""))
-    if(!file.exists(old.file)) PEcAn.logger::logger.error("file not found",old.file)
     ## open netcdf
-    nc <- ncdf4::nc_open(old.file)
+    nc <- tryCatch(ncdf4::nc_open(old.file), error = function(e) {
+      PEcAn.logger::logger.error(paste0(
+        "Unable to open input file `", old.file, "`. Skipping to next year."
+      ))
+      FALSE
+    })
+    if (isFALSE(nc)) next
 
     ## convert time to seconds
     sec <- nc$dim$time$vals
