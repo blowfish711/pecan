@@ -14,6 +14,7 @@ For more information about this file see also [Keep a Changelog](http://keepacha
   - Remove, or make "Suggests", a bunch of relatively underutilized R package dependencies.
 - Add template for documentation issues and add button to edit book.
 - Conditionally skip unit tests for downloading raw met data or querying the database when the required remote connection is not available.
+- Use `tryCatch(ncdf4::nc_open(file))` instead of `if(file.exists(file))` in `met2model.<MODEL>` functions. This allows these functions to work with remote NetCDF files via THREDDS or similar services.
 
 ### Added
 - Models will not advertise themselvs, so no need to register them a-priori with the database #2158
