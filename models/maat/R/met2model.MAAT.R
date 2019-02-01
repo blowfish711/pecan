@@ -21,7 +21,8 @@ PREFIX_XML <- "<?xml version=\"1.0\"?>\n"
 ##'
 ##' @name met2model.MAAT
 ##' @title Create MAAT met driver files
-##' @param in.path location on disk where inputs (CF met drivers) are stored
+##' @param in.path location on disk where inputs are stored. Note that
+##'   this can also be the URL prefix for a THREDDS/OpenDAP connection.
 ##' @param in.prefix prefix of input and output files
 ##' @param outfolder location on disk where MAAT met outputs will be stored
 ##' @param start_date the start date of the data to be downloaded (will only use the year part of the date)
@@ -80,81 +81,82 @@ met2model.MAAT <- function(in.path, in.prefix, outfolder, start_date, end_date,
   ## TODO need to filter out the data that is not inside start_date, end_date
   for (year in start_year:end_year) {
 
-    PEcAn.logger::logger.info(paste0("Processing year: ",year))
+    PEcAn.logger::logger.info(paste0("Processing year: ", year))
     ncdf.file <- file.path(in.path, paste(in.prefix, year, "nc", sep = "."))
+    nc <- tryCatch(ncdf4::nc_open(ncdf4.file), error = function(e) {
+      PEcAn.logger::logger.warn(paste0(
+        "Unable to open file `", ncdf.file, "`. Continuing to next year."
+      ))
+      FALSE
+    })
 
-    if (file.exists(ncdf.file)) {
-      ## open netcdf
-      nc <- ncdf4::nc_open(ncdf.file)
+    if (isFALSE(nc)) next
 
-      ## convert time to seconds
-      sec <- nc$dim$time$vals
-      frac.day <- nc$dim$time$vals
-      sec <- udunits2::ud.convert(sec, unlist(strsplit(nc$dim$time$units, " "))[1], "seconds")
+    nc <- ncdf4::nc_open(ncdf.file)
 
-      dt <- PEcAn.utils::seconds_in_year(year, leap_year) / length(sec)
+    ## convert time to seconds
+    sec <- nc$dim$time$vals
+    frac.day <- nc$dim$time$vals
+    sec <- udunits2::ud.convert(sec, unlist(strsplit(nc$dim$time$units, " "))[1], "seconds")
 
-      tstep <- round(day_secs / dt)
-      dt    <- day_secs / tstep
+    dt <- PEcAn.utils::seconds_in_year(year, leap_year) / length(sec)
 
-      ### extract required MAAT driver variables names(nc$var)
-      lat  <- ncdf4::ncvar_get(nc, "latitude")
-      lon  <- ncdf4::ncvar_get(nc, "longitude")
-      
-      # Air temperature
-      Tair <- ncdf4::ncvar_get(nc, "air_temperature")  ## in Kelvin
-      Tair_C <- udunits2::ud.convert(Tair, "K", "degC") ## in degC
-      
-      # Precipitation
-      Rain <- ncdf4::ncvar_get(nc, "precipitation_flux")  ## 'kg/m^2/s'
-      
-      # Get atmospheric pressure
-      Atm_press <- ncdf4::ncvar_get(nc,"air_pressure") ## in Pa
+    tstep <- round(day_secs / dt)
+    dt    <- day_secs / tstep
 
-      # get humidity vars
-      RH_perc <- try(ncdf4::ncvar_get(nc, "relative_humidity"), silent = TRUE)  ## RH Percentage
-      Qair <- try(ncdf4::ncvar_get(nc, "specific_humidity"), silent = TRUE)  #humidity (kg/kg)
-      SVP <- udunits2::ud.convert(PEcAn.data.atmosphere::get.es(Tair_C), "millibar", "Pa")  ## Saturation vapor pressure
-      VPD <- try(ncdf4::ncvar_get(nc, "water_vapor_saturation_deficit"), silent = TRUE)  ## in Pa
-      if (!is.numeric(VPD)) {
-        VPD <- SVP * (1 - PEcAn.data.atmosphere::qair2rh(Qair, Tair_C))
-        PEcAn.logger::logger.info("water_vapor_saturation_deficit absent; VPD calculated from Qair, Tair, and SVP (saturation vapor pressure) ")
-      }
-      VPD_kPa <- udunits2::ud.convert(VPD, "Pa", "kPa")
-      e_a <- SVP - VPD  # AirVP
-      if (!is.numeric(RH_perc)) {
-         RH_perc <- PEcAn.data.atmosphere::qair2rh(Qair, Tair_C,Atm_press)
-      }
+    ### extract required MAAT driver variables names(nc$var)
+    lat  <- ncdf4::ncvar_get(nc, "latitude")
+    lon  <- ncdf4::ncvar_get(nc, "longitude")
+    
+    # Air temperature
+    Tair <- ncdf4::ncvar_get(nc, "air_temperature")  ## in Kelvin
+    Tair_C <- udunits2::ud.convert(Tair, "K", "degC") ## in degC
+    
+    # Precipitation
+    Rain <- ncdf4::ncvar_get(nc, "precipitation_flux")  ## 'kg/m^2/s'
+    
+    # Get atmospheric pressure
+    Atm_press <- ncdf4::ncvar_get(nc,"air_pressure") ## in Pa
 
-      # get windspeed
-      ws <- try(ncdf4::ncvar_get(nc, "wind_speed"), silent = TRUE)
-      if (!is.numeric(ws) | length(unique(ws)) == 1) {
-        U <- ncdf4::ncvar_get(nc, "eastward_wind")
-        V <- ncdf4::ncvar_get(nc, "northward_wind")
-        ws <- sqrt(U ^ 2 + V ^ 2) ## m/s
-        PEcAn.logger::logger.info("wind_speed absent; calculated from eastward_wind and northward_wind")
-      }
-      
-      # get radiation
-      SW <- ncdf4::ncvar_get(nc, "surface_downwelling_shortwave_flux_in_air")  ## in W/m2
-      PAR <- try(ncdf4::ncvar_get(nc, "surface_downwelling_photosynthetic_photon_flux_in_air") * 1e+06, silent = TRUE)  ## mol/m2/s to umols/m2/s
-      if (!is.numeric(PAR)) {
-        PAR <- SW * 2.114  #W/m2 TO umol/m2/s
-      }
-
-      # get CO2 (if exists)
-      CO2 <- try(ncdf4::ncvar_get(nc, "mole_fraction_of_carbon_dioxide_in_air"), silent = TRUE)
-      useCO2 <- is.numeric(CO2)
-      if (useCO2) {
-        CO2 <- CO2 * 1e+06  ## convert from mole fraction (kg/kg) to ppm
-      }
-
-      ncdf4::nc_close(nc)
-      
-    } else {
-      print("Skipping to next year")
-      next
+    # get humidity vars
+    RH_perc <- try(ncdf4::ncvar_get(nc, "relative_humidity"), silent = TRUE)  ## RH Percentage
+    Qair <- try(ncdf4::ncvar_get(nc, "specific_humidity"), silent = TRUE)  #humidity (kg/kg)
+    SVP <- udunits2::ud.convert(PEcAn.data.atmosphere::get.es(Tair_C), "millibar", "Pa")  ## Saturation vapor pressure
+    VPD <- try(ncdf4::ncvar_get(nc, "water_vapor_saturation_deficit"), silent = TRUE)  ## in Pa
+    if (!is.numeric(VPD)) {
+      VPD <- SVP * (1 - PEcAn.data.atmosphere::qair2rh(Qair, Tair_C))
+      PEcAn.logger::logger.info("water_vapor_saturation_deficit absent; VPD calculated from Qair, Tair, and SVP (saturation vapor pressure) ")
     }
+    VPD_kPa <- udunits2::ud.convert(VPD, "Pa", "kPa")
+    e_a <- SVP - VPD  # AirVP
+    if (!is.numeric(RH_perc)) {
+      RH_perc <- PEcAn.data.atmosphere::qair2rh(Qair, Tair_C,Atm_press)
+    }
+
+    # get windspeed
+    ws <- try(ncdf4::ncvar_get(nc, "wind_speed"), silent = TRUE)
+    if (!is.numeric(ws) | length(unique(ws)) == 1) {
+      U <- ncdf4::ncvar_get(nc, "eastward_wind")
+      V <- ncdf4::ncvar_get(nc, "northward_wind")
+      ws <- sqrt(U ^ 2 + V ^ 2) ## m/s
+      PEcAn.logger::logger.info("wind_speed absent; calculated from eastward_wind and northward_wind")
+    }
+    
+    # get radiation
+    SW <- ncdf4::ncvar_get(nc, "surface_downwelling_shortwave_flux_in_air")  ## in W/m2
+    PAR <- try(ncdf4::ncvar_get(nc, "surface_downwelling_photosynthetic_photon_flux_in_air") * 1e+06, silent = TRUE)  ## mol/m2/s to umols/m2/s
+    if (!is.numeric(PAR)) {
+      PAR <- SW * 2.114  #W/m2 TO umol/m2/s
+    }
+
+    # get CO2 (if exists)
+    CO2 <- try(ncdf4::ncvar_get(nc, "mole_fraction_of_carbon_dioxide_in_air"), silent = TRUE)
+    useCO2 <- is.numeric(CO2)
+    if (useCO2) {
+      CO2 <- CO2 * 1e+06  ## convert from mole fraction (kg/kg) to ppm
+    }
+
+    ncdf4::nc_close(nc)
 
     ## build time variables (year, month, day of year)
     skip <- FALSE
