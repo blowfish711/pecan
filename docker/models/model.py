@@ -162,7 +162,7 @@ class RabbitMQBroadcast:
         message = {
             'id': str(uuid.uuid4()),
             'hostname': socket.gethostname(),
-            'queue': '%s_%s' % (model_info['type'], model_info['version']),
+            'queue': '%s_%s' % (model_info['name'], model_info['version']),
             'model_info': self.model_info
         }
         while self.thread:
@@ -191,7 +191,7 @@ if __name__ == "__main__":
     model_info = json.load(open('model.json', 'r'))
 
     # set the rabbitmq Queue
-    rabbitmq_queue = '%s_%s' % (model_info['type'], model_info['version'])
+    rabbitmq_queue = '%s_%s' % (model_info['name'], model_info['version'])
 
     # start the model announcer
     announcer = RabbitMQBroadcast(rabbitmq_uri, 'models', model_info, 5)
