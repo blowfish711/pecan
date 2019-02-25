@@ -2,7 +2,7 @@
 #'
 #' @inheritParams add_workflow
 #' @param model_queue Name of RabbitMQ model queue (character, default
-#'   = `NULL`). This should be in the form `modelname_modelrevision`.
+#'   = `NULL`). This should be in the form `modeltype_modelrevision`.
 #'   If this is `NULL`, this function will try to figure it out based
 #'   on the model ID in the settings object, which requires access to
 #'   the database (i.e. `con` must not be `NULL`).
@@ -38,17 +38,22 @@ add_rabbitmq <- function(settings,
   if (is.null(model_queue) && is.null(settings[["rabbitmq"]][["queue"]])) {
     # Deduce model queue from settings and database
     if (is.null(con)) {
-      stop("Database connection object (`con`) required to automatically determine model queue.")
+      stop("Database connection object (`con`) required ",
+           "to automatically determine model queue.")
     }
     model_id <- settings[["model"]][["id"]]
     if (is.null(model_id)) {
-      stop("Settings list must include model ID to automatically determine model queue.")
+      stop("Settings list must include model ID ",
+           "to automatically determine model queue.")
     }
-    model_dat <- prepared_query(con, (
-      "SELECT model_name, revision FROM models WHERE id = $1"
+    model_dat <- prepared_query(con, paste(
+      "SELECT modeltypes.name AS model_type, models.revision AS revision",
+      "FROM models INNER JOIN modeltypes",
+      "ON (models.modeltype_id = modeltypes.id)",
+      "WHERE models.id = $1"
     ), list(model_id))
     if (!nrow(model_dat) > 0) stop("Multiple models found. Unable to automatically determine model queue.")
-    model_queue <- paste(model_dat[["model_name"]], model_dat[["revision"]], sep = "_")
+    model_queue <- paste(model_dat[["model_type"]], model_dat[["revision"]], sep = "_")
   }
 
   rabbitmq_settings <- list(

@@ -16,7 +16,7 @@ add_rabbitmq(settings, model_queue = NULL, con = NULL,
 \item{settings}{Partially completed PEcAn \code{settings} list.}
 
 \item{model_queue}{Name of RabbitMQ model queue (character, default
-= \code{NULL}). This should be in the form \code{modelname_modelrevision}.
+= \code{NULL}). This should be in the form \code{modeltype_modelrevision}.
 If this is \code{NULL}, this function will try to figure it out based
 on the model ID in the settings object, which requires access to
 the database (i.e. \code{con} must not be \code{NULL}).}
