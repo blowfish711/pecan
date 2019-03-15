@@ -304,20 +304,20 @@ write.ensemble.configs <- function(defaults, ensemble.samples, settings, model,
       #if ( nrow(Pft_Site_df) > 0 & all(site_pfts_names %in% names(ensemble.samples)) ) ensemble.samples <- ensemble.samples [Pft_Site$name %>% unlist() %>% as.character()]
     }
     # Reading the site.pft specific tags from xml
-    site.pfts.vec <- settings$run$site$site.pft %>% unlist %>% as.character
+    site.pfts.vec <- purrr::map_chr(settings[[c("run", "site", "site.pft")]])
 
     if (!is.null(site.pfts.vec)) {
       # find the name of pfts defined in the body of pecan.xml
-      defined.pfts <- settings$pfts %>% purrr::map('name') %>% unlist %>% as.character
+      defined.pfts <- purrr::map_chr(settings$pfts, "name")
       # subset ensemble samples based on the pfts that are specified
       # in the site and they are also sampled from.
       if (length(which(site.pfts.vec %in% defined.pfts)) > 0 )
-        ensemble.samples <- ensemble.samples [site.pfts.vec[ which(site.pfts.vec %in% defined.pfts) ]]
-      if (length(which(!(site.pfts.vec %in% defined.pfts)))>0) 
+        ensemble.samples <- ensemble.samples[site.pfts.vec[site.pfts.vec %in% defined.pfts]]
       # warn if there is a pft specified in the site but it's not
       # defined in the pecan xml.
+      if (any(!(site.pfts.vec %in% defined.pfts))) 
         PEcAn.logger::logger.warn(paste0("The following pfts are specified for the siteid ", settings$run$site$id ," but they are not defined as a pft in pecan.xml:",
-                                         site.pfts.vec[which(!(site.pfts.vec %in% defined.pfts))]))
+                                         site.pfts.vec[!site.pfts.vec %in% defined.pfts]))
     }
 
     # if no ensemble piece was in the xml I replicate n times the
@@ -418,18 +418,18 @@ write.ensemble.configs <- function(defaults, ensemble.samples, settings, model,
     ensemble.id <- restart$ensemble.id
 
     # Reading the site.pft specific tags from xml
-    site.pfts.vec <- settings$run$site$site.pft %>% unlist %>% as.character
+    site.pfts.vec <- purrr::map_chr(settings[[c("run", "site", "site.pft")]])
 
     if (!is.null(site.pfts.vec)) {
       # find the name of pfts defined in the body of pecan.xml
-      defined.pfts <- settings$pfts %>% purrr::map('name') %>% unlist %>% as.character
+      defined.pfts <- purrr::map_chr(settings[["pfts"]], "name")
       # subset ensemble samples based on the pfts that are specified in the site and they are also sampled from.
-      if (length(which(site.pfts.vec %in% defined.pfts)) > 0 )
+      if (any(site.pfts.vec %in% defined.pfts))
         new.params <- new.params %>% map(~list(.x[[which(site.pfts.vec %in% defined.pfts)]],restart=.x$restart))
       # warn if there is a pft specified in the site but it's not defined in the pecan xml.
-      if (length(which(!(site.pfts.vec %in% defined.pfts)))>0) 
+      if (any(!site.pfts.vec %in% defined.pfts))
         PEcAn.logger::logger.warn(paste0("The following pfts are specified for the siteid ", settings$run$site$id ," but they are not defined as a pft in pecan.xml:",
-                                         site.pfts.vec[which(!(site.pfts.vec %in% defined.pfts))]))
+                                         site.pfts.vec[!(site.pfts.vec %in% defined.pfts)]))
     }
 
 
