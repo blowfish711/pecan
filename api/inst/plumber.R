@@ -1,5 +1,15 @@
 # plumber.R
 
+# Setup
+connect <- function() {
+  con <- DBI::dbConnect(
+    RPostgres::Postgres(),
+    user = "bety",
+    password = "bety",
+    host = "postgres"
+  )
+}
+
 #' Another test the plumber api
 #' @get /test
 #' @html
@@ -7,18 +17,14 @@ function() {
   "<html>The API is working</html>"
 }
 
-#' Test the plumber api
-#' @get /test2
+#' List tables
+#' @get /tables
 function() {
-  list(
-    success = "Plumber API is running successfully"
-  )
+  DBI::dbListTables(connect())
 }
 
-#' Return a message
-#' @param msg "Message to return"
-#' @get /echo
-#' @html
-function(msg) {
-  sprintf("<html>You have entered the following: %s </html>", msg)
+#' Return a list of models
+#' @get /models
+function(name = "", revision = "", modeltype = "") {
+  pecanapi::search_models(connect(), name, revision, modeltype)
 }
