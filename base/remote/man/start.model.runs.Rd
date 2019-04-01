@@ -5,7 +5,7 @@
 \title{Start selected ecosystem model runs within PEcAn workflow}
 \usage{
 \method{start}{model.runs}(settings, write = TRUE,
-  stop.on.error = TRUE)
+  stop.on.error = TRUE, nowait = FALSE)
 }
 \arguments{
 \item{settings}{pecan settings object}
@@ -13,6 +13,8 @@
 \item{write}{(logical) Whether or not to write to the database. Default TRUE.}
 
 \item{stop.on.error}{Throw error if \emph{any} of the runs fails. Default TRUE.}
+
+\item{nowait}{(logical) If \code{TRUE}, don't wait for model to finish.}
 }
 \description{
 Start selected ecosystem model runs within PEcAn workflow

@@ -27,7 +27,6 @@ options(error=quote({
 
 #options(warning.expression=status.end("ERROR"))
 
-
 # ----------------------------------------------------------------------
 # PEcAn Workflow
 # ----------------------------------------------------------------------
@@ -108,11 +107,19 @@ if ((length(which(commandArgs() == "--advanced")) != 0) && (PEcAn.utils::status.
   q();
 }
 
+# `nowait` flag determines whether or not to wait for model runs to finish.
+nowait <- isTRUE(as.logical(settings[[c("workflow", "nowait")]]))
+
 # Start ecosystem model runs
 if (PEcAn.utils::status.check("MODEL") == 0) {
   PEcAn.utils::status.start("MODEL")
-  PEcAn.remote::runModule.start.model.runs(settings, stop.on.error = FALSE)
+  PEcAn.remote::runModule.start.model.runs(settings, stop.on.error = FALSE, nowait = nowait)
   PEcAn.utils::status.end()
+}
+
+if (nowait) {
+  PEcAn.logger::logger.warn("`nowait` is TRUE. Not waiting for model runs.")
+  quit(save = "no")
 }
 
 # Get results of model runs

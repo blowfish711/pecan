@@ -12,6 +12,7 @@
 ##' @param settings pecan settings object
 ##' @param write (logical) Whether or not to write to the database. Default TRUE.
 ##' @param stop.on.error Throw error if _any_ of the runs fails. Default TRUE.
+##' @param nowait (logical) If `TRUE`, don't wait for model to finish. 
 ##' @export start.model.runs
 ##' @examples
 ##' \dontrun{
@@ -19,7 +20,7 @@
 ##' }
 ##' @author Shawn Serbin, Rob Kooper, David LeBauer, Alexey Shiklomanov
 ##'
-start.model.runs <- function(settings, write = TRUE, stop.on.error = TRUE) {
+start.model.runs <- function(settings, write = TRUE, stop.on.error = TRUE, nowait = FALSE) {
 
   run_file <- file.path(settings$rundir, "runs.txt")
   # check if runs need to be done
@@ -197,6 +198,13 @@ start.model.runs <- function(settings, write = TRUE, stop.on.error = TRUE) {
     }
   }
 
+  if (nowait) {
+    PEcAn.logger::logger.debug(paste0(
+      "Jobs started, but `nowait` is TRUE, so returning without waiting for completion."
+    ))
+    return(invisible(NULL))
+  } 
+
   # wait for all jobs to finish
   if (length(jobids) > 0) {
     PEcAn.logger::logger.debug("Waiting for the following jobs:", unlist(jobids, use.names = FALSE))
@@ -267,10 +275,10 @@ start.model.runs <- function(settings, write = TRUE, stop.on.error = TRUE) {
 } # start.model.runs
 
 ##' @export
-runModule.start.model.runs <- function(settings,stop.on.error=TRUE) {
+runModule.start.model.runs <- function(settings, ...) {
   if (is.MultiSettings(settings) || is.Settings(settings)) {
     write <- settings$database$bety$write
-    return(start.model.runs(settings, write,stop.on.error))
+    return(start.model.runs(settings, write = write, ...))
   } else {
     PEcAn.logger::logger.severe("runModule.start.model.runs only works with Settings or MultiSettings")
   }
