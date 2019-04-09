@@ -36,7 +36,8 @@ SOURCES = \
     RTM/modules/dataSpec/dataSpec_prospectd.f90 \
     RTM/modules/dataSpec/dataSpec_wavelength.f90 \
     RTM/modules/dataSpec/dataSpec_sun.f90 \
-    RTM/modules/dataSpec/dataSpec_prospect4.f90
+    RTM/modules/dataSpec/dataSpec_prospect4.f90 \
+    RTM/utils.f90
 
 NON_MODULE_OBJECTS = \
     RTM/pro2s/pro52s.o \
@@ -60,7 +61,8 @@ NON_MODULE_OBJECTS = \
     RTM/prospect/prospect.5B.o \
     RTM/prospect/prospect.tav.o \
     RTM/prospect/prospect.expint.o \
-    RTM/prospect/prospect.gpm.o
+    RTM/prospect/prospect.gpm.o \
+    RTM/utils.o
 
 MODULE_OBJECTS = \
     RTM/modules/mod_types.o \
