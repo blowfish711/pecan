@@ -1,8 +1,10 @@
 #' Generalized plate model
 #'
 #' This is the fundamental physical model underlying the PROSPECT family of leaf RTMs.
-#' @param k Specific absorption coefficient (400 - 2500nm)
-#' @param refractive Refractive index (400 - 2500nm)
+#' @param k Specific absorption coefficient (400 - 2500nm). See also
+#'   [dataspec_4()] and friends.
+#' @param refractive Refractive index (400 - 2500nm). See
+#'   [refractive_45()] and friends.
 #' @param N Effective number of mesophyll layers (see [prospect()])
 #' @export
 generalized_plate_model <- function(k, refractive, N) {
