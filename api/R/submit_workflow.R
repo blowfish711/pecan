@@ -60,8 +60,9 @@ submit_workflow <- function(settings,
     auth,
     body = bod
   )
-  follow_url <- sprintf("%s/pecan/05-running.php?workflowid=%s",
-                        base_url, as.character(settings[["workflow"]][["id"]]))
+  follow_url <- sprintf("%s/pecan/05-running.php?workflowid=%s&hostname=docker",
+                        base_url,
+                        format(settings[["workflow"]][["id"]], scientific = FALSE))
   message("Follow workflow progress from your browser at:\n", follow_url)
   httr::content(result)
 }

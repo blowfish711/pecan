@@ -1,0 +1,1 @@
+/Users/shik544/Box Sync/Projects/pecan_project/pecan/.Rprofile
