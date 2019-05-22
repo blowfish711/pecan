@@ -183,19 +183,22 @@ arrhenius.scaling.traits <- function(data, covariates, temp.covariates, new.temp
       lapply(temp.covariates, function(temp.covariate) covariates[covariates$name == temp.covariate, ])
       )
 
-    data <- append.covariate(data, 'temp', covariates)
+    data <- append.covariate(data, "temp", covariates)
 
     # Assign default value for traits with no covariates
     data$temp[is.na(data$temp)] <- missing.temp
 
     # Scale traits
-    data$mean <- PEcAn.utils::arrhenius.scaling(observed.value = data$mean, old.temp = data$temp, new.temp=new.temp)
-    data$stat <- PEcAn.utils::arrhenius.scaling(observed.value = data$stat, old.temp = data$temp, new.temp=new.temp)
+    data$mean <- PEcAn.utils::arrhenius.scaling(observed.value = data$mean, old.temp = data$temp, new.temp = new.temp)
+    data$stat <- PEcAn.utils::arrhenius.scaling(observed.value = data$stat, old.temp = data$temp, new.temp = new.temp)
 
     #remove temporary covariate column.
-    data<-data[,colnames(data)!='temp']
+    data <- data[, colnames(data) != "temp"]
   } else {
-    data <- NULL
+    PEcAn.logger::logger.warn(
+      "Arrhenius scaling requires covariates that are unavailable. ",
+      "Returning data as is."
+    )
   }
   return(data)
 }
@@ -543,7 +546,7 @@ query.trait.data <- function(trait, spstr, con = NULL, update.check.only = FALSE
 
   ## if result is empty, stop run
 
-  if (nrow(result) == 0) {
+  if (is.null(result) || nrow(result) == 0) {
     return(NA)
     warning(paste("there is no data for", trait))
   } else {
