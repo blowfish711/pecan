@@ -53,7 +53,7 @@ approx.posterior <- function(trait.mcmc, priors, trait.data = NULL, outdir = NUL
 
     ## first determine the candidate set of models based on any range restrictions
     zerobound <- c("exp", "gamma", "lnorm", "weibull")
-    if (pdist %in% "beta") {
+    if (pdist == "beta") {
       m   <- mean(dat)
       v   <- var(dat)
       k   <- (1 - m)/m
@@ -75,7 +75,7 @@ approx.posterior <- function(trait.mcmc, priors, trait.data = NULL, outdir = NUL
       }
       posteriors[trait, "parama"] <- fit$estimate[1]
       posteriors[trait, "paramb"] <- fit$estimate[2]
-    } else if (pdist %in% zerobound | (pdist == "unif" & pparm[1] > 0)) {
+    } else if (pdist %in% zerobound || (pdist == "unif" && pparm[1] >= 0)) {
       dist.names <- c("exp", "lnorm", "weibull", "norm")
       fit <- list()
       fit[[1]] <- try(suppressWarnings(MASS::fitdistr(dat, "exponential")), silent = TRUE)
@@ -91,6 +91,19 @@ approx.posterior <- function(trait.mcmc, priors, trait.data = NULL, outdir = NUL
       failfit.bool <- sapply(fit, class) == "try-error"
       fit[failfit.bool] <- NULL
       dist.names <- dist.names[!failfit.bool]
+
+      if (!is.null(fit[[4]])) {
+        qn <- qnorm(0.0001, fit[[4]]$estimate[1], fit[[4]]$estimate[2])
+        if (qn < 0) {
+          PEcAn.logger::logger.info(paste0(
+            "Prior is zero-bounded, but posterior normal estimate ",
+            "has some density below zero. Excluding normal density from ",
+            "posterior density candidate list."
+          ))
+          fit[[4]] <- NULL
+          dist.names <- setdiff(dist.names, "norm")
+        }
+      }
       
       fparm <- lapply(fit, function(x) { as.numeric(x$estimate) })
       fAIC <- lapply(fit, AIC) 
