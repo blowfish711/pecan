@@ -4,13 +4,12 @@
 \alias{generate_narr_url}
 \title{Generate NARR url from a vector of dates}
 \usage{
-generate_narr_url(dates, flx)
+generate_narr_url(dates, datatype)
 }
 \arguments{
 \item{dates}{Vector of dates for which to generate URL}
 
-\item{flx}{(Logical) If `TRUE`, format for `flx` variables. Otherwise, 
-format for `sfc` variables. See [narr_flx_vars].}
+\item{datatype}{Type of NARR file -- either `flx` or `sfc`}
 }
 \description{
 Figures out file names for the given dates, based on NARR's convoluted and 

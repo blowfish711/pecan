@@ -4,15 +4,16 @@
 \alias{get_narr_url}
 \title{Retrieve NARR data from a given URL}
 \usage{
-get_narr_url(url, xy, flx, pb = NULL)
+get_narr_url(url, xy, datatype, cachefile, pb = NULL)
 }
 \arguments{
 \item{url}{Full URL to NARR thredds file}
 
 \item{xy}{Vector length 2 containing NARR coordinates}
 
-\item{flx}{(Logical) If `TRUE`, format for `flx` variables. Otherwise, 
-format for `sfc` variables. See [narr_flx_vars].}
+\item{datatype}{Type of NARR file -- either `flx` or `sfc`}
+
+\item{cachefile}{Output file for caching results}
 
 \item{pb}{Progress bar R6 object (default = `NULL`)}
 }

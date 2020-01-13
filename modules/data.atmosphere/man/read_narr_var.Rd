@@ -4,7 +4,7 @@
 \alias{read_narr_var}
 \title{Read a specific variable from a NARR NetCDF file}
 \usage{
-read_narr_var(nc, xy, variable, unit, flx, pb = NULL)
+read_narr_var(nc, xy, variable, unit, datatype, pb = NULL)
 }
 \arguments{
 \item{nc}{`ncdf4` connection object}
@@ -15,8 +15,7 @@ read_narr_var(nc, xy, variable, unit, flx, pb = NULL)
 
 \item{unit}{Output unit of variable to retrieve}
 
-\item{flx}{(Logical) If `TRUE`, format for `flx` variables. Otherwise, 
-format for `sfc` variables. See [narr_flx_vars].}
+\item{datatype}{Type of NARR file -- either `flx` or `sfc`}
 
 \item{pb}{Progress bar R6 object (default = `NULL`)}
 }

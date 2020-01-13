@@ -5,7 +5,8 @@
 \title{Retrieve NARR data using thredds}
 \usage{
 get_NARR_thredds(start_date, end_date, lat.in, lon.in, progress = TRUE,
-  drop_outside = TRUE, parallel = TRUE, ncores = 1)
+  narr_cache_dir = "narr_cache", overwrite_cache = FALSE,
+  drop_outside = TRUE, parallel = TRUE, ncores = 1, silent = FALSE)
 }
 \arguments{
 \item{start_date}{Start date for meteorology}
@@ -19,13 +20,20 @@ get_NARR_thredds(start_date, end_date, lat.in, lon.in, progress = TRUE,
 \item{progress}{Whether or not to show a progress bar (default = `TRUE`).
 Requires the `progress` package to be installed.}
 
+\item{narr_cache_dir}{Directory where to cache downloaded data. Default is
+`<outfolder>/narr_cache`.}
+
+\item{overwrite_cache}{Delete existing cache? Default = `FALSE`}
+
 \item{drop_outside}{Whether or not to drop dates outside of `start_date` to 
 `end_date` range (default = `TRUE`).}
 
-\item{parallel}{Download in parallel? Default = TRUE}
+\item{parallel}{Download in parallel? Default = `TRUE`}
 
-\item{ncores}{Number of cores for parallel download. Default is 
+\item{ncores}{Number of cores for parallel download. Default is
 `parallel::detectCores()`}
+
+\item{silent}{Silence error messages?}
 }
 \value{
 `tibble` containing time series of NARR data for the given site

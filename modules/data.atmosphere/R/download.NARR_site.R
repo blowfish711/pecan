@@ -5,12 +5,18 @@
 #' @param end_date End date for met data
 #' @param lat.in Site latitude coordinate
 #' @param lon.in Site longitude coordinate
-#' @param overwrite Overwrite existing files?  Default=FALSE
-#' @param verbose Turn on verbose output? Default=FALSE
-#' @param parallel Download in parallel? Default = TRUE
-#' @param ncores Number of cores for parallel download. Default is 
+#' @param overwrite Overwrite existing files? Default=`FALSE`
+#' @param verbose Turn on verbose output? Default=`FALSE`
+#' @param progress Print a progress bar as data are being downloaded? Default = `TRUE`
+#' @param narr_cache_dir Directory where to cache downloaded data. Default is
+#'   `<outfolder>/narr_cache`.
+#' @param overwrite_cache Delete existing cache? Default = `FALSE`
+#' @param parallel Download in parallel? Default = `TRUE`
+#' @param ncores Number of cores for parallel download. Default is
 #' `parallel::detectCores()`
 #'
+#' @param ... Additional arguments (not used)
+#' @inheritParams robustly
 #' @examples
 #' 
 #' \dontrun{
@@ -27,16 +33,23 @@ download.NARR_site <- function(outfolder,
                                overwrite = FALSE,
                                verbose = FALSE,
                                progress = TRUE,
+                               narr_cache_dir = file.path(outfolder,
+                                                          "narr_cache"),
+                               overwrite_cache = FALSE,
                                parallel = TRUE,
-                               ncores = if (parallel) parallel::detectCores() else NULL,
+                               ncores = parallel::detectCores(),
+                               silent = TRUE,
                                ...) {
 
   if (verbose) PEcAn.logger::logger.info("Downloading NARR data")
   narr_data <- get_NARR_thredds(
     start_date, end_date, lat.in, lon.in,
     progress = progress,
+    narr_cache_dir = narr_cache_dir,
+    overwrite_cache = overwrite_cache,
     parallel = parallel,
-    ncores = ncores
+    ncores = ncores,
+    silent = silent
   )
   dir.create(outfolder, showWarnings = FALSE, recursive = TRUE)
 
@@ -152,14 +165,17 @@ col2ncvar <- function(variable, dims) {
 #' @export
 get_NARR_thredds <- function(start_date, end_date, lat.in, lon.in,
                              progress = TRUE,
+                             narr_cache_dir = "narr_cache",
+                             overwrite_cache = FALSE,
                              drop_outside = TRUE,
                              parallel = TRUE,
-                             ncores = 1
-                             ) {
+                             ncores = 1,
+                             silent = FALSE) {
 
   PEcAn.logger::severeifnot(
     length(start_date) == 1,
-    msg = paste("Start date must be a scalar, but has length", length(start_date))
+    msg = paste("Start date must be a scalar, but has length",
+                length(start_date))
   )
 
   PEcAn.logger::severeifnot(
@@ -203,87 +219,105 @@ get_NARR_thredds <- function(start_date, end_date, lat.in, lon.in,
     )
   )
 
+  if (overwrite_cache) {
+    unlink(narr_cache_dir, recursive = TRUE, force = TRUE)
+  }
+  dir.create(narr_cache_dir, showWarnings = FALSE)
+
   dates <- seq(start_date, end_date, by = "1 day")
-  flx_df <- generate_narr_url(dates, TRUE)
-  sfc_df <- generate_narr_url(dates, FALSE)
+
+  flx_df_all <- generate_narr_url(dates, "flx") %>%
+    dplyr::mutate(datatype = "flx")
+  sfc_df_all <- generate_narr_url(dates, "sfc") %>%
+    dplyr::mutate(datatype = "sfc")
+  both_df_all <- dplyr::bind_rows(flx_df_all, sfc_df_all) %>%
+    dplyr::mutate(cachefile = file.path(
+        narr_cache_dir,
+        paste(datatype, startdate, sep = "-")
+      )
+    )
+  both_df <- both_df_all %>%
+    dplyr::filter(!file.exists(cachefile))
+  both_cached <- both_df_all %>%
+    dplyr::filter(file.exists(cachefile))
+  PEcAn.logger::logger.debug(paste0(
+    "Found ", nrow(both_cached),
+    " cached NARR files that can be skipped. ",
+    "Still have to download ",
+    nrow(both_df), " NARR files."
+  ))
 
   # Load dimensions, etc. from first netCDF file
-  nc1 <- robustly(ncdf4::nc_open, n = 20, timeout = 0.5)(flx_df$url[1])
-  on.exit(ncdf4::nc_close(nc1), add = TRUE)
-  xy <- latlon2narr(nc1, lat.in, lon.in)
-
-  if (parallel) {
-    if (!requireNamespace("parallel", quietly = TRUE)
-        || !requireNamespace("doParallel", quietly = TRUE)) {
-      PEcAn.logger::logger.severe(
-        "Could not find all packages needed for simultaneous NARR downloads. ",
-        "Either run `install.packages(c(\"parallel\", \"doParallel\"))`, ",
-        "or call get_NARR_thredds with `parallel = FALSE`.")
-    }
-
-    # Load in parallel
-    PEcAn.logger::logger.info("Downloading in parallel")
-    flx_df$flx <- TRUE
-    sfc_df$flx <- FALSE
-    get_dfs <- dplyr::bind_rows(flx_df, sfc_df)
-    cl <- parallel::makeCluster(ncores)
-    doParallel::registerDoParallel(cl)
-    get_dfs$data <- foreach::`%dopar%`(
-      foreach::foreach(
-        url = get_dfs$url, flx = get_dfs$flx,
-        .packages = c("PEcAn.data.atmosphere", "magrittr"),
-        .export = c("get_narr_url", "robustly")
-      ),
-        robustly(get_narr_url)(url, xy = xy, flx = flx)
-    )
-    flx_data_raw <- dplyr::filter(get_dfs, flx)
-    sfc_data_raw <- dplyr::filter(get_dfs, !flx)
+  # NOTE: Need to use `flx_df_all` here for special case if all files are cached.
+  xy_cachefile <- file.path(narr_cache_dir, "xy")
+  if (file.exists(xy_cachefile)) {
+    xy <- as.integer(readLines(xy_cachefile))
+    names(xy) <- c("x", "y")
   } else {
-
-    # Retrieve remaining variables by iterating over URLs
-    npb <- nrow(flx_df) * nrow(narr_flx_vars) +
-      nrow(sfc_df) * nrow(narr_sfc_vars)
-    if (progress && requireNamespace("progress")) {
-      pb <- progress::progress_bar$new(
-        total = npb,
-        format = "[:bar] :current/:total ETA: :eta"
-      )
-    } else {
-      pb <- NULL
-    }
-
-    flx_data_raw <- flx_df %>%
-      dplyr::mutate(
-        data = purrr::map(
-          url,
-          robustly(get_narr_url, n = 20, timeout = 1),
-          xy = xy,
-          flx = TRUE,
-          pb = pb
-        )
-      )
-
-    sfc_data_raw <- sfc_df %>%
-      dplyr::mutate(
-        data = purrr::map(
-          url,
-          robustly(get_narr_url, n = 20, timeout = 1),
-          xy = xy,
-          flx = FALSE,
-          pb = pb
-        )
-      )
+    nc1 <- robustly(ncdf4::nc_open, n = 20, timeout = 0.5, silent = silent)(flx_df_all$url[1])
+    on.exit(ncdf4::nc_close(nc1), add = TRUE)
+    xy <- latlon2narr(nc1, lat.in, lon.in)
+    writeLines(as.character(xy), xy_cachefile)
   }
-  flx_data <- post_process(flx_data_raw) %>%
+
+  mapfun <- purrr::pmap
+  if (parallel) {
+    PEcAn.utils:::need_packages("furrr")
+    mapfun <- purrr::partial(furrr::future_pmap, .progress = progress)
+    progress <- FALSE
+  }
+
+  # Retrieve remaining variables by iterating over URLs
+  if (progress && requireNamespace("progress")) {
+    pb <- progress::progress_bar$new(
+      total = nrow(flux_df) * nrow(narr_flx_vars) +
+        nrow(sfc_df) * nrow(narr_sfc_vars),
+      format = "[:bar] :current/:total ETA: :eta"
+    )
+  } else {
+    pb <- NULL
+  }
+
+  both_data_raw <- both_df %>%
+    dplyr::mutate(
+      data = mapfun(
+        list(url = url, cachefile = cachefile, datatype = datatype),
+        robustly(get_narr_url, n = 20, timeout = 1, silent = silent),
+        xy = xy,
+        pb = pb
+      )
+    )
+
+  both_data_cached <- both_cached %>%
+    dplyr::mutate(
+      data = purrr::map(
+        cachefile,
+        read.table,
+        header = TRUE,
+        sep = "\t"
+      )
+    )
+
+  both_data <- dplyr::bind_rows(both_data_raw, both_data_cached)
+  flx_data <- both_data %>%
+    dplyr::filter(datatype == "flx") %>%
+    post_process() %>%
     dplyr::select(datetime, narr_flx_vars$CF_name)
-  sfc_data <- post_process(sfc_data_raw) %>%
+  sfc_data <- both_data %>%
+    dplyr::filter(datatype == "sfc") %>%
+    post_process() %>%
     dplyr::select(datetime, narr_sfc_vars$CF_name)
-  met_data <- dplyr::full_join(flx_data, sfc_data, by = "datetime") %>%
+
+  met_data <- flx_data %>%
+    dplyr::full_join(sfc_data, by = "datetime") %>%
     dplyr::arrange(datetime)
 
   if (drop_outside) {
     met_data <- met_data %>%
-      dplyr::filter(datetime >= start_date, datetime < (end_date + lubridate::days(1)))
+      dplyr::filter(
+        datetime >= start_date,
+        datetime < (end_date + lubridate::days(1))
+      )
   }
 
   met_data
@@ -308,12 +342,14 @@ post_process <- function(dat) {
 #' inconsistent naming scheme.
 #'
 #' @param dates Vector of dates for which to generate URL
-#' @param flx (Logical) If `TRUE`, format for `flx` variables. Otherwise, 
-#' format for `sfc` variables. See [narr_flx_vars].
+#' @param datatype Type of NARR file -- either `flx` or `sfc`
 #' @author Alexey Shiklomanov
-generate_narr_url <- function(dates, flx) {
-  ngroup <- if (flx) 8 else 10
-  tag <- if (flx) "flx" else "sfc"
+generate_narr_url <- function(dates, datatype) {
+  ngroup <- switch(
+    datatype,
+    "flx" = 8,
+    "sfc" = 10
+  )
   base_url <- paste(
     # Have to login, so use Alexey Shiklomanov's account
     "http://ashiklom%40bu.edu:Thisis4theNARR@rda.ucar.edu",
@@ -324,7 +360,7 @@ generate_narr_url <- function(dates, flx) {
     dplyr::mutate(
       year = lubridate::year(date),
       month = lubridate::month(date),
-      daygroup = daygroup(date, flx)
+      daygroup = daygroup(date, datatype)
     ) %>%
     dplyr::group_by(year, month, daygroup) %>%
     dplyr::summarize(
@@ -333,7 +369,7 @@ generate_narr_url <- function(dates, flx) {
         "%s/%d/NARR%s_%d%02d_%s.tar",
         base_url,
         unique(year),
-        tag,
+        datatype,
         unique(year),
         unique(month),
         unique(daygroup)
@@ -344,17 +380,17 @@ generate_narr_url <- function(dates, flx) {
 }
 
 #' Assign daygroup tag for a given date
-daygroup <- function(date, flx) {
+daygroup <- function(date, datatype) {
   mday <- lubridate::mday(date)
   mmax <- lubridate::days_in_month(date)
-  if (flx) {
+  if (datatype == "flx") {
     dplyr::case_when(
       mday %in% 1:8 ~ "0108",
       mday %in% 9:16 ~ "0916",
       mday %in% 17:24 ~ "1724",
       mday >= 25 ~ paste0(25, mmax)
     )
-  } else {
+  } else if (datatype == "sfc") {
     dplyr::case_when(
       mday %in% 1:9 ~ "0109",
       mday %in% 10:19 ~ "1019",
@@ -368,26 +404,39 @@ daygroup <- function(date, flx) {
 #' @param url Full URL to NARR thredds file
 #' @param xy Vector length 2 containing NARR coordinates
 #' @param pb Progress bar R6 object (default = `NULL`)
+#' @param cachefile Output file for caching results
 #' @inheritParams generate_narr_url
 #' @author Alexey Shiklomanov
-get_narr_url <- function(url, xy, flx, pb = NULL) {
-  stopifnot(length(xy) == 2, length(url) == 1, is.character(url))
+get_narr_url <- function(url, xy, datatype, cachefile, pb = NULL) {
+  stopifnot(length(xy) == 2, length(url) == 1, is.character(url),
+            datatype %in% c("flx", "sfc"))
   nc <- ncdf4::nc_open(url)
   on.exit(ncdf4::nc_close(nc), add = TRUE)
-  timevar <- if (flx) "time" else "reftime"
+  flx <- datatype == "flx"
+  timevar <- switch(
+    datatype,
+    "flx" = "time",
+    "sfc" = "reftime"
+  )
   dhours <- ncdf4::ncvar_get(nc, timevar)
   # HACK: Time variable seems inconsistent.
   # Sometimes starts at 0, sometimes offset by 3.
   # This is a hack to make it always start at zero
   if (dhours[1] == 3) dhours <- dhours - 3
-  narr_vars <- if (flx) narr_flx_vars else narr_sfc_vars
+  narr_vars <- switch(
+    datatype,
+    "flx" = narr_flx_vars,
+    "sfc" = narr_sfc_vars
+  )
   result <- purrr::pmap(
     narr_vars %>% dplyr::select(variable = NARR_name, unit = units),
     read_narr_var,
-    nc = nc, xy = xy, flx = flx, pb = pb
+    nc = nc, xy = xy, datatype = datatype, pb = pb
   )
   names(result) <- narr_vars$CF_name
-  dplyr::bind_cols(dhours = dhours, result)
+  result2 <- dplyr::bind_cols(dhours = dhours, result)
+  write.table(result2, cachefile, sep = "\t", row.names = FALSE)
+  result2
 }
 
 #' Read a specific variable from a NARR NetCDF file
@@ -397,12 +446,13 @@ get_narr_url <- function(url, xy, flx, pb = NULL) {
 #' @param unit Output unit of variable to retrieve
 #' @inheritParams get_narr_url
 #' @author Alexey Shiklomanov
-read_narr_var <- function(nc, xy, variable, unit, flx, pb = NULL) {
-  if (flx) {
+read_narr_var <- function(nc, xy, variable, unit, datatype, pb = NULL) {
+  stopifnot(datatype %in% c("flx", "sfc"))
+  if (datatype == "flx") {
     # Third dimension is height above ground -- first index is 2m above ground
     start <- c(xy, 1, 1)
     count <- c(1, 1, 1, -1)
-  } else {
+  } else if (datatype == "sfc") {
     # Third dimension is reference time; only has one index
     start <- c(xy, 1, 1)
     count <- c(1, 1, -1, -1)

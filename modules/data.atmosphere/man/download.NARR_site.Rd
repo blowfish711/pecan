@@ -6,8 +6,9 @@
 \usage{
 download.NARR_site(outfolder, start_date, end_date, lat.in, lon.in,
   overwrite = FALSE, verbose = FALSE, progress = TRUE,
-  parallel = TRUE, ncores = if (parallel) parallel::detectCores() else
-  NULL, ...)
+  narr_cache_dir = file.path(outfolder, "narr_cache"),
+  overwrite_cache = FALSE, parallel = TRUE,
+  ncores = parallel::detectCores(), silent = TRUE, ...)
 }
 \arguments{
 \item{outfolder}{Target directory for storing output}
@@ -20,14 +21,25 @@ download.NARR_site(outfolder, start_date, end_date, lat.in, lon.in,
 
 \item{lon.in}{Site longitude coordinate}
 
-\item{overwrite}{Overwrite existing files?  Default=FALSE}
+\item{overwrite}{Overwrite existing files? Default=`FALSE`}
 
-\item{verbose}{Turn on verbose output? Default=FALSE}
+\item{verbose}{Turn on verbose output? Default=`FALSE`}
 
-\item{parallel}{Download in parallel? Default = TRUE}
+\item{progress}{Print a progress bar as data are being downloaded? Default = `TRUE`}
 
-\item{ncores}{Number of cores for parallel download. Default is 
+\item{narr_cache_dir}{Directory where to cache downloaded data. Default is
+`<outfolder>/narr_cache`.}
+
+\item{overwrite_cache}{Delete existing cache? Default = `FALSE`}
+
+\item{parallel}{Download in parallel? Default = `TRUE`}
+
+\item{ncores}{Number of cores for parallel download. Default is
 `parallel::detectCores()`}
+
+\item{silent}{Silence error messages?}
+
+\item{...}{Additional arguments (not used)}
 }
 \description{
 Download NARR time series for a single site

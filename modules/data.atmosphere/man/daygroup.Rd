@@ -4,7 +4,7 @@
 \alias{daygroup}
 \title{Assign daygroup tag for a given date}
 \usage{
-daygroup(date, flx)
+daygroup(date, datatype)
 }
 \description{
 Assign daygroup tag for a given date
