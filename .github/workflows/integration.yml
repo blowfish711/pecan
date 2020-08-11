@@ -13,6 +13,6 @@ jobs:
           docker-compose up -d postgres
           docker run --rm --network pecan_pecan pecan/db
           docker-compose run --rm bety user carya illinois "Demo admin" carya@example.com 1 1
-          docker run -it --rm --network pecan_pecan --volume pecan_pecan:/data --env FQDN=docker pecan/data:develop
+          docker run --rm --network pecan_pecan --volume pecan_pecan:/data --env FQDN=docker pecan/data:develop
           docker-compose up -d
           curl localhost:8000/api/workflows/ --user carya:illinois -H "Content-Type:application/xml" --data-binary "@tests/api.sipnet.xml"
