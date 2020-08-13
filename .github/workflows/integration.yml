@@ -18,6 +18,10 @@ jobs:
           docker-compose up -d
           echo "Sleeping for 30 seconds to allow containers to spin up..."
           sleep 30
+
+      - name: Get RabbitMQ status, for debuggin
+        run: docker-compose logs rabbitmq
+
       - name: Run integration tests
         run: bash base/workflow/inst/run-integration.sh
       - name: Save results as artifact

@@ -5,8 +5,8 @@ set -euo pipefail
 for f in tests/api/*.xml; do
     FSUBMIT=${f/xml/submit.json}
     curl -s localhost:8000/api/workflows/ --user carya:illinois -H "Content-Type:application/xml" --data-binary "@$f" > $FSUBMIT
-    WORKFLOWID=$(jq ".workflow_id" $FSUBMIT -r)
     cat $FSUBMIT
+    WORKFLOWID=$(jq ".workflow_id" $FSUBMIT -r -e)
     echo "-----------------"
     echo "Submitted test $f with workflow ID $WORKFLOWID"
     echo "-----------------"
