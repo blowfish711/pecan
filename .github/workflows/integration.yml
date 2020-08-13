@@ -16,6 +16,8 @@ jobs:
           docker-compose run --rm bety user carya illinois "Demo admin" carya@example.com 1 1
           docker run --rm --network pecan_pecan --volume pecan_pecan:/data --env FQDN=docker pecan/data:develop
           docker-compose up -d
+          echo "Sleeping for 30 seconds to allow containers to spin up..."
+          sleep 30
       - name: Run integration tests
         run: bash base/workflow/inst/run-integration.sh
       - name: Save results as artifact
