@@ -16,12 +16,12 @@ jobs:
           docker-compose run --rm bety user carya illinois "Demo admin" carya@example.com 1 1
           docker run --rm --network pecan_pecan --volume pecan_pecan:/data --env FQDN=docker pecan/data:develop
           docker-compose up -d
-          echo "Sleeping for 30 seconds to allow containers to spin up..."
-          sleep 30
-
-      - name: Get RabbitMQ status, for debuggin
-        run: docker-compose logs rabbitmq
-
+          # Wait for RabbitMQ to launch
+          until $(docker-compose logs rabbitmq | grep -q "accepting AMQP connection"); do
+            echo "Waiting for RabbitMQ..."
+            sleep 3
+          done
+          echo "Done!"
       - name: Run integration tests
         run: bash base/workflow/inst/run-integration.sh
       - name: Save results as artifact
