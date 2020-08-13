@@ -21,6 +21,9 @@ until [ $ISCOMPLETE -eq 0 ]; do
         FSTATUS=${f/submit.json/status.json}
         FOUT=${f/submit.json/workflow.Rout}
         curl -s localhost:8000/api/workflows/$WORKFLOWID/status --user carya:illinois > $FSTATUS
+        echo "\n"
+        cat $FSTATUS
+        echo "\n"
         if grep -q "FINISHED.*DONE" $FSTATUS; then
             echo "Workflow $WORKFLOWID completed successfully"
             curl -s localhost:8000/api/workflows/$WORKFLOWID/file/workflow.Rout > $FOUT
