@@ -69,6 +69,11 @@ for (i in seq_len(nrow(dat))) {
       variable = "NPP"
     )
   }
+  if (dat[i, "model"] == "ED2") {
+    settings$inputs <- modifyList(settings$inputs, list(
+      thsums = "/data/ed_inputs"
+    ))
+  }
   xml_string <- paste0(
     '<?xml version="1.0"?>\n',
     toString(listToXml(settings, "pecan"))
