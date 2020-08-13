@@ -24,8 +24,8 @@
   <update>AUTO</update>
  </meta.analysis>
  <model>
-  <type>ED2</type>
-  <revision>git</revision>
+  <type>ED2.2</type>
+  <revision>2.2.0</revision>
  </model>
  <ensemble>
   <variable>NPP</variable>

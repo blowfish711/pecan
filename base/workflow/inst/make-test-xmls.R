@@ -70,7 +70,7 @@ for (i in seq_len(nrow(dat))) {
     )
   }
   if (dat[i, "model"] == "ED2") {
-    settings$inputs <- modifyList(settings$inputs, list(
+    settings$run$inputs <- modifyList(settings$run$inputs, list(
       thsums = "/data/ed_inputs"
     ))
   }
