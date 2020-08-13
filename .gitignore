@@ -99,3 +99,6 @@ contrib/modellauncher/modellauncher
 
 # don't checkin renv
 /renv/
+
+/tests/api/*
+!/tests/api/*.xml

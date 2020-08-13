@@ -7,7 +7,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - run: |
+      - name: Setup and launch Docker stack
+        run: |
           echo 'PECAN_VERSION=develop' > .env
           echo 'BETY_VERSION=develop' >> .env
           docker-compose up -d postgres
@@ -15,4 +16,10 @@ jobs:
           docker-compose run --rm bety user carya illinois "Demo admin" carya@example.com 1 1
           docker run --rm --network pecan_pecan --volume pecan_pecan:/data --env FQDN=docker pecan/data:develop
           docker-compose up -d
-          curl localhost:8000/api/workflows/ --user carya:illinois -H "Content-Type:application/xml" --data-binary "@tests/api.sipnet.xml"
+      - name: Run integration tests
+        run: bash base/workflow/inst/run-integration.sh
+      - name: Save results as artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: test-results
+          path: tests/api/*

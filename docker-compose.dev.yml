@@ -29,7 +29,11 @@ services:
   # this can be used if you are changng the code for a model in PEcAN
   sipnet:
     volumes:
-      - 'pecan_lib:/usr/local/lib/R/site-library/'    
+      - 'pecan_lib:/usr/local/lib/R/site-library/'
+
+  api:
+    volumes:
+      - 'pecan_api:/api'
 
   # this will open postgres to the hostcompute
   #postgres:
@@ -72,6 +76,11 @@ volumes:
     driver_opts:
       type: none
       device: '${PWD}/web/'
+      o: bind
+  pecan_api:
+    driver_opts:
+      type: none
+      device: '${PWD}/apps/api/'
       o: bind
   pecan_lib:
   #  driver_opts:
