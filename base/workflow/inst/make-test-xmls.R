@@ -45,16 +45,16 @@ for (i in seq_len(nrow(dat))) {
   )
 
   # Get the model ID. Currently, this doesn't work correctly in PEcAn itself.
-  model_raw <- httr::GET(
-    "http://localhost:8000/api/models/",
-    httr::authenticate("carya", "illinois"),
-    query = list(model_name = dat[i, "model"],
-                 revision = dat[i, "revision"])
-  )
-  model_info <- jsonlite::fromJSON(httr::content(model_id, "text"))
-  model_id <- subset(model_info$models,
-                     model_name == dat[i, "model"] &
-                       revision == dat[i, "revision"])[["model_id"]]
+  ## model_raw <- httr::GET(
+  ##   "http://localhost:8000/api/models/",
+  ##   httr::authenticate("carya", "illinois"),
+  ##   query = list(model_name = dat[i, "model"],
+  ##                revision = dat[i, "revision"])
+  ## )
+  ## model_info <- jsonlite::fromJSON(httr::content(model_id, "text"))
+  ## model_id <- subset(model_info$models,
+  ##                    model_name == dat[i, "model"] &
+  ##                      revision == dat[i, "revision"])[["model_id"]]
   settings <- list(
     pfts = do.call(c, pftlist),
     meta.analysis = list(
@@ -63,7 +63,8 @@ for (i in seq_len(nrow(dat))) {
       threshold = 1.2,
       update = "AUTO"
     ),
-    model = list(id = model_id),
+    model = list(type = dat[i, "model"],
+                 revision = dat[i, "revision"]),
     ensemble = list(variable = "NPP",
                     size = dat[i, "ensemble_size"]),
     run = list(
