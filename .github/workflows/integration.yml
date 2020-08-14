@@ -3,10 +3,17 @@ name: Integration
 on: [push, pull_request]
 
 jobs:
-  api-sipnet:
+  integration:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - name: Setup R
+        uses: r-lib/actions/setup-r@v1
+      - name: Additional R package dependencies
+        run: sudo apt-get install libcurl4-openssl-dev
+      - name: Install R packages
+        run: Rscript -e 'install.packages(c("XML", "httr"))'
+      - run: Rscript base/workflow/inst/make-test-xmls.R base/workflow/inst/default_tests.csv
       - name: Setup and launch Docker stack
         run: |
           echo 'PECAN_VERSION=develop' > .env

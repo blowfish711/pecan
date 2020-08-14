@@ -1,5 +1,6 @@
 stopifnot(
-  requireNamespace("XML", quietly = TRUE)
+  requireNamespace("XML", quietly = TRUE),
+  requireNamespace("httr", quietly = TRUE)
 )
 
 listToXml <- function(item, tag) {
@@ -36,11 +37,24 @@ dat <- read.csv(infile, stringsAsFactors = FALSE)
 
 dat2 <- dat
 dat2$workflow_id <- NA_character_
+
 for (i in seq_len(nrow(dat))) {
   pftlist <- lapply(
     strsplit(dat[i, "pft"], "\\|")[[1]],
     function(x) list(pft = list(name = x))
   )
+
+  # Get the model ID. Currently, this doesn't work correctly in PEcAn itself.
+  model_raw <- httr::GET(
+    "http://localhost:8000/api/models/",
+    httr::authenticate("carya", "illinois"),
+    query = list(model_name = dat[i, "model"],
+                 revision = dat[i, "revision"])
+  )
+  model_info <- jsonlite::fromJSON(httr::content(model_id, "text"))
+  model_id <- subset(model_info$models,
+                     model_name == dat[i, "model"] &
+                       revision == dat[i, "revision"])[["model_id"]]
   settings <- list(
     pfts = do.call(c, pftlist),
     meta.analysis = list(
@@ -49,8 +63,7 @@ for (i in seq_len(nrow(dat))) {
       threshold = 1.2,
       update = "AUTO"
     ),
-    model = list(type = dat[i, "model"],
-                 revision = dat[i, "revision"]),
+    model = list(id = model_id),
     ensemble = list(variable = "NPP",
                     size = dat[i, "ensemble_size"]),
     run = list(
@@ -71,13 +84,22 @@ for (i in seq_len(nrow(dat))) {
   }
   if (dat[i, "model"] == "ED2") {
     settings$run$inputs <- modifyList(settings$run$inputs, list(
-      thsums = "/data/ed_inputs"
+      lu = list(id = 294),
+      thsum = list(id = 295),
+      veg = list(id = 296),
+      soil = list(id = 297)
+    ))
+    settings$model <- modifyList(settings$model, list(
+      phenol.scheme = 0,
+      edin = "ED2IN.r2.2.0",  # HACK: Shouldn't be hard-coded
+      config.header = list(ed_misc = list(output_month = 12))
     ))
   }
   xml_string <- paste0(
     '<?xml version="1.0"?>\n',
     toString(listToXml(settings, "pecan"))
   )
+  dir.create(file.path("tests", "api"), showWarnings = FALSE)
   write(xml_string, sprintf("tests/api/test_%03d.xml", i))
   # Submit run via API
   ## res <- httr::POST(
