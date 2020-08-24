@@ -47,13 +47,15 @@ submit.workflow.list <- function(workflowList, userDetails) {
   )
   if(! is.null(workflowList$model$id) && (is.null(workflowList$model$type) || is.null(workflowList$model$revision))) {
     dbcon <- PEcAn.DB::betyConnect()
-    res <- dplyr::tbl(dbcon, "models") %>% 
-      select(id, model_name, revision) %>%
-      filter(id == !!workflowList$model$id) %>%
-      collect()
+    modtypes <- dplyr::tbl(dbcon, "modeltypes") %>%
+      dplyr::select(modeltype_id = id, model_type = name)
+    res <- dplyr::tbl(dbcon, "models") %>%
+      dplyr::inner_join(modtypes, "modeltype_id") %>%
+      dplyr::select(id, model_name, model_type, revision) %>%
+      dplyr::filter(id == !!workflowList$model$id) %>%
+      dplyr::collect()
     PEcAn.DB::db.close(dbcon)
-    
-    workflowList$model$type <- res$model_name
+    workflowList$model$type <- res$model_type
     workflowList$model$revision <- res$revision
   }
   # Fix RabbitMQ details
