@@ -201,7 +201,7 @@ met.process <- function(site, input_met, start_date, end_date, model,
       dbparms=dbparms
     )
     
-    if (met %in% c("CRUNCEP", "GFDL","NOAA_GEFS_downscale")) {
+    if (met %in% c("CRUNCEP", "GFDL", "NOAA_GEFS_downscale", "NARR")) {
       ready.id <- raw.id
       # input_met$id overwrites ready.id below, needs to be populated here
       input_met$id <- raw.id
@@ -262,8 +262,8 @@ met.process <- function(site, input_met, start_date, end_date, model,
   #--------------------------------------------------------------------------------------------------#
   # Change to CF Standards
   if (stage$met2cf) {
-    new.site.id <- ifelse(met %in% c("NARR"), register$siteid, site$id)
-    
+    new.site.id <- site$id
+
     cf.id <- .met2cf.module(raw.id = raw.id, 
                             register = register,
                             met = met, 

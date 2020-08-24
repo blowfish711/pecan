@@ -13,7 +13,7 @@ download.NARR_site(
   overwrite = FALSE,
   verbose = FALSE,
   progress = TRUE,
-  parallel = TRUE,
+  parallel = FALSE,
   ncores = if (parallel) parallel::detectCores() else NULL,
   ...
 )

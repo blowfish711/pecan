@@ -27,11 +27,33 @@ download.NARR_site <- function(outfolder,
                                overwrite = FALSE,
                                verbose = FALSE,
                                progress = TRUE,
-                               parallel = TRUE,
+                               parallel = FALSE,
                                ncores = if (parallel) parallel::detectCores() else NULL,
                                ...) {
 
   if (verbose) PEcAn.logger::logger.info("Downloading NARR data")
+
+  # Check for existing data before redownloading
+  start_year <- lubridate::year(start_date)
+  end_year <- lubridate::year(end_date)
+  targetfiles <- file.path(
+    outfolder,
+    sprintf("NARR.%d.nc", seq(start_year, end_year))
+  )
+  if (all(file.exist(targetfiles))) {
+    message("All files exist.")
+    results <- tibble::tibble(
+      year = seq(start_year, end_year),
+      file = targetfiles,
+      host = PEcAn.remote::fqdn(),
+      start_date = start_date,
+      end_date = end_date,
+      dbfile.name = "NARR",
+      mimetype = "application/x-netcdf",
+      formatname = "CF Meteorology"
+    )
+    return(results)
+  }
   narr_data <- get_NARR_thredds(
     start_date, end_date, lat.in, lon.in,
     progress = progress,
@@ -54,6 +76,7 @@ download.NARR_site <- function(outfolder,
       host = PEcAn.remote::fqdn(),
       start_date = date_limits_chr[1],
       end_date = date_limits_chr[2],
+      dbfile.name = "NARR",
       mimetype = "application/x-netcdf",
       formatname = "CF Meteorology",
     )
@@ -222,7 +245,9 @@ get_NARR_thredds <- function(start_date, end_date, lat.in, lon.in,
     }
 
     # Load in parallel
-    PEcAn.logger::logger.info("Downloading in parallel")
+    PEcAn.logger::logger.info(paste0(
+      "Downloading in parallel using ", ncores, " threads."
+    ))
     flx_df$flx <- TRUE
     sfc_df$flx <- FALSE
     get_dfs <- dplyr::bind_rows(flx_df, sfc_df)
@@ -479,3 +504,6 @@ latlon2lcc <- function(lat.in, lon.in) {
   ptrans <- sp::spTransform(pll, CRS_narr)
   ptrans
 }
+
+#' @export
+download.NARR <- download.NARR_site

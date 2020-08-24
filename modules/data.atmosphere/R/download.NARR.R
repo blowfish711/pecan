@@ -17,7 +17,8 @@
 ##' @export
 ##'
 ##' @author Betsy Cowdery, Shawn Serbin
-download.NARR <- function(outfolder, start_date, end_date, overwrite = FALSE, verbose = FALSE, method, ...) {
+download.NARR.deprecated <- function(outfolder, start_date, end_date, overwrite = FALSE, verbose = FALSE, method, ...) {
+  .Deprecated("download.NARR")
   
   start_date <- as.POSIXlt(start_date, tz = "UTC")
   end_date   <- as.POSIXlt(end_date, tz = "UTC")
