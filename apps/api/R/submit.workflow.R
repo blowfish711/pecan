@@ -41,8 +41,8 @@ submit.workflow.list <- function(workflowList, userDetails) {
       host = "localhost",
       dbname = "bety",
       user = "bety",
-      password = "bety", 
-      driver = "PostgreSQL"
+      password = "bety",
+      driver = "Postgres"
     )
   )
   if(! is.null(workflowList$model$id) && (is.null(workflowList$model$type) || is.null(workflowList$model$revision))) {

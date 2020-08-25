@@ -458,15 +458,15 @@ db.getShowQueries <- function() {
 ##' pftid <- get.id("pfts", c("name", "modeltype_id"), c("ebifarm.salix", 1), con)
 ##' }
 get.id <- function(table, colnames, values, con, create=FALSE, dates=TRUE){
-  values <- lapply(values, function(x) ifelse(is.character(x), shQuote(x), x))
-  where_clause <- paste(colnames, values , sep = " = ", collapse = " and ")
-  query <- paste("select id from", table, "where", where_clause, ";")
-  id <- db.query(query = query, con = con)[["id"]]
+  where_clause <- paste(colnames, "?", sep = " = ", collapse = " and ")
+  query <- paste("SELECT id FROM", table, "WHERE", where_clause, ";")
+  id <- db.query(query, con = con, values = as.list(values))[["id"]]
   if (is.null(id) && create) {
-    colinsert <- paste0(colnames, collapse=", ")
-    valinsert <- paste0(values, collapse=", ")
-    PEcAn.logger::logger.info("INSERT INTO ", table, " (", colinsert, ") VALUES (", valinsert, ")")
-    db.query(query = paste0("INSERT INTO ", table, " (", colinsert, ") VALUES (", valinsert, ")"), con = con)
+    colinsert <- paste0(colnames, collapse = ", ")
+    vp <- paste0(rep("?", length(values)), collapse = ", ")
+    PEcAn.logger::logger.info("INSERT INTO ", table, " (", colinsert, ") VALUES (", vp, ")")
+    db.query(paste0("INSERT INTO ", table, " (", colinsert, ") VALUES (", vp, ")"), con = con,
+             values = as.list(values))
     id <- db.query(query, con)[["id"]]
   }
   return(id)
