@@ -197,8 +197,20 @@ write.config.ED2 <- function(trait.values, settings, run.id, defaults = settings
     ed2in.text[[ed2in_tag]] <- value
     return(ed2in.text)
   }
-  ed2in.text <- proc_met_startend(settings[[c("run", "site", "met.start")]], "METCYC1")
-  ed2in.text <- proc_met_startend(settings[[c("run", "site", "met.end")]], "METCYCF")
+  metstart <- settings[[c("run", "site", "met.start")]]
+  if (is.null(metstart)) {
+    PEcAn.logger::logger.warn("run$site$met.start is unset.",
+                              "Setting to run$start.date")
+    metstart <- settings[[c("run", "start.date")]]
+  }
+  metend <- settings[[c("run", "site", "met.end")]]
+  if (is.null(metend)) {
+    PEcAn.logger::logger.warn("run$site$met.end is unset.",
+                              "Setting to run$end.date")
+    metend <- settings[[c("run", "end.date")]]
+  }
+  ed2in.text <- proc_met_startend(metstart, "METCYC1")
+  ed2in.text <- proc_met_startend(metend, "METCYCF")
 
   if (is.null(settings$model$phenol.scheme)) {
     PEcAn.logger::logger.error(paste0("no phenology scheme set; \n",
