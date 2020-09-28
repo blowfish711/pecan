@@ -37,6 +37,8 @@ jobs:
         r-version: '${{ matrix.R }}'
     - name: make lib folders
       run: mkdir -p "${R_LIBS}" "${R_LIBS_USER}"
+    - name: Install system dependencies
+      run: sudo apt-get install -y libgit2-dev libssh2-1-dev libcurl4-openssl-dev
     - name: cache R packages
       uses: actions/cache@v1
       with:
