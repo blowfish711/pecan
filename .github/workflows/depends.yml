@@ -1,13 +1,14 @@
 name: Docker Depends Image
 
-on:
-  push:
-    branches:
-      - develop
+on: [push, pull_request]
+  # push:
+  #   # branches:
+  #   #   - develop
+  #   #   - r-402
 
-  # this runs on the develop branch
-  schedule:
-    - cron: '0 0 * * *'
+  # # this runs on the develop branch
+  # schedule:
+  #   - cron: '0 0 * * *'
 
 jobs:
   depends:
