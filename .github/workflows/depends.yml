@@ -12,7 +12,7 @@ on: [push, pull_request]
 
 jobs:
   depends:
-    if: github.repository == 'PecanProject/pecan'
+    # if: github.repository == 'PecanProject/pecan'
 
     runs-on: ubuntu-20.04
 
@@ -42,6 +42,7 @@ jobs:
           fi
 
       - name: Login into registry
+        if: github.repository == 'PecanProject/pecan'
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u ${{ github.actor }} --password-stdin
           if [ -n "${{ secrets.DOCKERHUB_USERNAME }}" -a -n "${{ secrets.DOCKERHUB_PASSWORD }}" ]; then
@@ -49,6 +50,7 @@ jobs:
           fi
 
       - name: Push docker image ${{ matrix.R }}
+        if: github.repository == 'PecanProject/pecan'
         run: |
           IMAGE_ID=docker.pkg.github.com/${{ github.repository }}/depends
           IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
