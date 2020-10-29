@@ -65,8 +65,12 @@ get.trait.data.pft <- function(pft, modeltype, dbfiles, dbcon, trait.names,
   # as different from `""` returned here, even though they are really
   # the same thing.
   pft_members <- pft_members %>%
-    dplyr::mutate_if(is.character, ~dplyr::na_if(., ""))
-  
+    dplyr::mutate_if(is.character, ~dplyr::na_if(., "")) %>%
+    # Columns with all NA are interpreted as logical, not character, which
+    # breaks the later comparison. Here, we know these are character columns, so
+    # we force them to be.
+    dplyr::mutate_at(c("genus", "species", "scientificname"), as.character)
+
   # get the priors
   prior.distns <- PEcAn.DB::query.priors(pft = pftid, trstr = PEcAn.utils::vecpaste(trait.names), con = dbcon)
   prior.distns <- prior.distns[which(!rownames(prior.distns) %in% names(pft$constants)),]
