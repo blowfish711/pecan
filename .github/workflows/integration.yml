@@ -1,0 +1,34 @@
+name: Integration
+
+on: [push, pull_request]
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup R
+        uses: r-lib/actions/setup-r@v1
+      - name: Additional R package dependencies
+        run: sudo apt-get install libcurl4-openssl-dev
+      - name: Install rpecanapi dependencies
+        run: Rscript -e 'install.packages(c("remotes", "dplyr", "tidyr", "tibble", "purrr", "httr", "glue"))'
+      - name: Install rpecanapi
+        run: Rscript -e 'remotes::install_github("pecanproject/rpecanapi")'
+      - name: Setup and launch Docker stack
+        run: |
+          echo 'PECAN_VERSION=develop' > .env
+          echo 'BETY_VERSION=develop' >> .env
+          docker-compose up -d postgres
+          docker run --rm --network pecan_pecan pecan/db
+          docker-compose run --rm bety user ashiklom admin "Alexey Admin" demo@example.com 1 1
+          docker run --rm --network pecan_pecan --volume pecan_pecan:/data --env FQDN=docker pecan/data:develop
+          docker-compose up -d
+          # Wait for RabbitMQ to launch
+          until $(docker-compose logs rabbitmq | grep -q "accepting AMQP connection"); do
+            echo "Waiting for RabbitMQ..."
+            sleep 3
+          done
+          echo "Done!"
+      - name: Run integration tests
+        run: Rscript -e 'source(system.file("run-test-list.R", package = "rpecanapi"))'
